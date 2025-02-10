@@ -1,9 +1,9 @@
 use std::time::Duration;
 
-use bevy_sudoku::{puzzles::classic::ClassicPuzzle, utility::seed::SeedRng};
 use divan::{bench, Bencher};
 use rand::{Rng, RngCore};
 use rand_seeder::SipHasher;
+use sudoku_machine::{puzzles::classic::ClassicPuzzle, utility::seed::SeedRng};
 
 fn main() {
     divan::main();

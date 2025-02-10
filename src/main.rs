@@ -2,11 +2,10 @@ use bevy::{
     prelude::*,
     window::{PresentMode, WindowMode},
 };
-use bevy_sudoku::{
+use sudoku_machine::{
     plugins::{common::theme, game, menu, nav},
-    PuzzleSettings,
+    AppState, PuzzleSettings, APP_TITLE,
 };
-use bevy_sudoku::{AppState, APP_TITLE};
 
 fn main() {
     App::new()

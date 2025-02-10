@@ -1189,24 +1189,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_sudoku"
-version = "0.1.0"
-dependencies = [
- "arboard",
- "bevy",
- "dark-light",
- "derive_builder",
- "divan",
- "fastrand",
- "indoc",
- "num_enum",
- "rand",
- "rand_seeder",
- "strum",
- "strum_macros",
-]
-
-[[package]]
 name = "bevy_tasks"
 version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4278,6 +4260,24 @@ dependencies = [
  "quote",
  "rustversion",
  "syn",
+]
+
+[[package]]
+name = "sudoku_machine"
+version = "0.1.0"
+dependencies = [
+ "arboard",
+ "bevy",
+ "dark-light",
+ "derive_builder",
+ "divan",
+ "fastrand",
+ "indoc",
+ "num_enum",
+ "rand",
+ "rand_seeder",
+ "strum",
+ "strum_macros",
 ]
 
 [[package]]
