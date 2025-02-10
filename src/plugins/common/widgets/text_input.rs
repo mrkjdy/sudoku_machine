@@ -1,17 +1,12 @@
 use arboard::Clipboard;
 use bevy::input::keyboard::Key;
+use bevy::input::keyboard::KeyboardInput;
 use bevy::input::ButtonState;
 use bevy::prelude::*;
-use bevy::{ecs::system::EntityCommands, input::keyboard::KeyboardInput};
 use derive_builder::Builder;
 
-use crate::plugins::common::{
-    focus::FocusedEntity,
-    theme::{
-        node::ThemedNodeBundleBuilder, text::ThemedTextBundleBuilder, ThemeComponent,
-        UseThemeTextColorForBackground,
-    },
-};
+use crate::plugins::common::theme::focus::FocusedEntity;
+use crate::plugins::common::theme::Themed;
 
 use super::Spawnable;
 
@@ -38,12 +33,13 @@ pub fn text_input_plugin(app: &mut App) {
 }
 
 #[derive(Component, Clone)]
-pub struct TextInputData {
+#[require(Themed, Node, Interaction)]
+pub struct TextInputContainer {
     pub placeholder_text: String,
     pub is_empty: bool,
 }
 
-impl Default for TextInputData {
+impl Default for TextInputContainer {
     fn default() -> Self {
         Self {
             placeholder_text: default(),
@@ -55,44 +51,42 @@ impl Default for TextInputData {
 #[derive(Builder)]
 #[builder(build_fn(skip), default, public)]
 pub struct TextInputWidget {
-    text_input_data: TextInputData,
-    font_size: f32,
-    container_style: Style,
-    text_style: Style,
-    justify_text: JustifyText,
-    // no_cursor: bool,
-    background_color: ThemeComponent<BackgroundColor>,
+    text_input_container: TextInputContainer,
+    text_font: TextFont,
+    container_node: Node,
+    text_node: Node,
+    // justify_text: JustifyText,
+    // background_color: ThemeComponent<BackgroundColor>,
 }
 
 impl TextInputWidgetBuilder {
     pub fn build(&self) -> TextInputWidget {
         let TextInputWidgetBuilder {
-            text_input_data,
-            font_size,
-            container_style,
-            text_style,
-            justify_text,
-            background_color,
+            text_input_container,
+            text_font,
+            container_node,
+            text_node,
+            // justify_text,
+            // background_color,
         } = self;
         TextInputWidget {
-            text_input_data: text_input_data.clone().unwrap_or_default(),
-            font_size: font_size.unwrap_or_default(),
-            container_style: container_style.clone().unwrap_or_default(),
-            text_style: text_style.clone().unwrap_or_default(),
-            justify_text: justify_text.clone().unwrap_or_default(),
-            background_color: background_color.clone().unwrap_or_default(),
+            text_input_container: text_input_container.clone().unwrap_or_default(),
+            text_font: text_font.clone().unwrap_or_default(),
+            container_node: container_node.clone().unwrap_or_default(),
+            text_node: text_node.clone().unwrap_or_default(),
+            // justify_text: justify_text.clone().unwrap_or_default(),
+            // background_color: background_color.clone().unwrap_or_default(),
         }
     }
 }
 
 #[derive(Component)]
-struct TextInputContainer;
-
-#[derive(Component)]
+#[require(Themed, Text)]
 struct TextInputText;
 
 #[derive(Component)]
-struct TextInputCursor;
+#[require(Node)]
+pub struct TextInputCursor;
 
 impl Spawnable for TextInputWidget {
     fn spawn_with_components<'a, S: super::Spawn>(
@@ -101,54 +95,54 @@ impl Spawnable for TextInputWidget {
         components: impl Bundle,
     ) -> EntityCommands<'a> {
         let TextInputWidget {
-            text_input_data,
-            font_size,
-            container_style,
-            text_style,
-            justify_text,
+            text_input_container,
+            text_font,
+            container_node,
+            text_node,
+            // justify_text,
             // no_cursor,
-            background_color,
+            // background_color,
         } = self;
 
-        let container = ThemedNodeBundleBuilder::default()
-            .style(Style {
+        let container_bundle = (
+            text_input_container.clone(),
+            Node {
                 overflow: Overflow {
                     x: OverflowAxis::Hidden,
                     y: OverflowAxis::Hidden,
                 },
-                ..container_style.clone()
-            })
-            .background_color(background_color.clone())
-            .build();
+                align_items: AlignItems::Center,
+                ..container_node.clone()
+            },
+            // BackgroundColor(background_color.clone())
+        );
 
-        let text = ThemedTextBundleBuilder::default()
-            .value(text_input_data.placeholder_text.clone())
-            .style(text_style.clone())
-            .font_size(*font_size)
-            .justify_text(*justify_text)
-            .line_break_behavior(bevy::text::BreakLineOn::NoWrap)
-            .build();
+        let text_bundle = (
+            TextInputText,
+            Text::new(text_input_container.placeholder_text.clone()),
+            Node {
+                height: Val::Px(text_font.font_size),
+                margin: UiRect::vertical(Val::Px(8.0)),
+                justify_content: JustifyContent::Center,
+                ..text_node.clone()
+            },
+            text_font.clone(),
+        );
 
-        let text_cursor = NodeBundle {
-            style: Style {
+        let cursor_bundle = (
+            TextInputCursor,
+            Node {
                 width: Val::Px(1.0),
-                height: Val::Px(*font_size),
+                height: Val::Px(text_font.font_size + 4.0),
                 ..default()
             },
-            visibility: Visibility::Hidden,
-            ..default()
-        };
+            Visibility::Hidden,
+        );
 
-        let mut ec = spawner.spawn((
-            container,
-            text_input_data.clone(),
-            Interaction::default(),
-            TextInputContainer,
-        ));
-        ec.insert(components);
+        let mut ec = spawner.spawn((container_bundle, components));
         ec.with_children(|parent| {
-            parent.spawn((text, TextInputText));
-            parent.spawn((text_cursor, TextInputCursor, UseThemeTextColorForBackground));
+            parent.spawn(text_bundle);
+            parent.spawn(cursor_bundle);
         });
         return ec;
     }
@@ -156,7 +150,7 @@ impl Spawnable for TextInputWidget {
 
 fn text_input_focus_system(
     focused_entity: Res<FocusedEntity>,
-    container_query: Query<(&TextInputData, &Children), With<TextInputContainer>>,
+    container_query: Query<(&TextInputContainer, &Children), With<TextInputContainer>>,
     mut text_query: Query<&mut Text, With<TextInputText>>,
     mut text_cursor_query: Query<&mut Visibility, With<TextInputCursor>>,
 ) {
@@ -167,7 +161,7 @@ fn text_input_focus_system(
             // Show the placeholder if the text input is empty
             if text_input_data.is_empty {
                 let mut text = text_query.get_mut(container_children[0]).unwrap();
-                text.sections[0].value = text_input_data.placeholder_text.clone();
+                text.0 = text_input_data.placeholder_text.clone();
             }
             // Hide the cursor
             let mut text_cursor_visibility =
@@ -183,7 +177,7 @@ fn text_input_focus_system(
             // Hide the placeholder if the text input is empty
             if text_input_data.is_empty {
                 let mut text = text_query.get_mut(container_children[0]).unwrap();
-                text.sections[0].value = "".into();
+                text.0 = "".into();
             }
             // Show the cursor
             let mut text_cursor_visibility =
@@ -231,7 +225,7 @@ impl ClipboardResource {
 
 fn typing_system(
     focused_entity: Res<FocusedEntity>,
-    mut container_query: Query<(&mut TextInputData, &Children), With<TextInputContainer>>,
+    mut container_query: Query<(&mut TextInputContainer, &Children), With<TextInputContainer>>,
     mut text_query: Query<&mut Text, With<TextInputText>>,
     mut keyboard_input_events: EventReader<KeyboardInput>,
     mut clipboard_resource: ResMut<ClipboardResource>,
@@ -252,7 +246,7 @@ fn typing_system(
 
     // Get the text input val
     let mut text = text_query.get_mut(container_children[0]).unwrap();
-    let text_input_value = &mut text.sections[0].value;
+    let text_input_value = &mut text.0;
 
     // Handle the keyboard event
     for keyboard_input_event in keyboard_input_events.read() {

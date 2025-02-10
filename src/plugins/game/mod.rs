@@ -30,9 +30,9 @@ impl PuzzleType {
                 apart, like in chess."
             }
             PuzzleType::FullKropki => {
-                "Classic rules plus Kropki dot rules for adjacent cells:\n\
-                 • a black dot means one of the numbers is twice the value of the other\n\
-               	 • a white dot means the numbers are consecutive"
+                "Classic rules plus Kropki dot rules for adjacent cells:\
+                \n • a black dot means one of the numbers is twice the value of the other\
+               	\n • a white dot means the numbers are consecutive"
             }
         }
         .into()

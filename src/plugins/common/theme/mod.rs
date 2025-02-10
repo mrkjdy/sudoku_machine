@@ -2,34 +2,18 @@ use bevy::{
     prelude::*,
     window::{WindowTheme, WindowThemeChanged},
 };
-use text::{FontColor, FontWeight};
+use button::themed_button_plugin;
+use node::themed_node_plugin;
+use text::themed_text_plugin;
 
-use super::focus::{focus_plugin, FocusedEntity};
+use focus::focus_plugin;
 
 pub mod button;
+pub mod focus;
 pub mod node;
 pub mod text;
 
-// TODO - add run conditions to as many systems as possible!
-
-pub fn theme_plugin(app: &mut App) {
-    app.init_resource::<Theme>()
-        .add_plugins(focus_plugin)
-        .add_systems(Startup, setup_theme)
-        .add_systems(
-            Update,
-            (
-                window_theme_system,
-                themed_text_init_system,
-                themed_container_init_system,
-                theme_change_system.run_if(resource_changed::<Theme>),
-                themed_button_interaction_system,
-                focus_outline_system,
-            ),
-        );
-}
-
-#[derive(Resource)]
+#[derive(Resource, Clone)]
 struct Theme {
     clear_color: Color,
     text_font_regular: Handle<Font>,
@@ -81,37 +65,24 @@ impl Default for Theme {
     }
 }
 
-#[derive(Default, Component, Clone)]
-pub(super) enum ThemeComponent<T> {
-    #[default]
-    Themed,
-    Other(T),
+#[derive(Component, Default)]
+pub struct Themed;
+
+pub fn theme_plugin(app: &mut App) {
+    app.init_resource::<Theme>()
+        .add_systems(Startup, theme_init_system)
+        .add_systems(Update, (theme_change_system, clear_color_system))
+        .add_plugins((
+            themed_text_plugin,
+            themed_node_plugin,
+            themed_button_plugin,
+            focus_plugin,
+        ));
 }
 
-impl<T> ThemeComponent<T> {
-    pub(self) fn other_or(&self, default: T) -> T
-    where
-        T: Copy,
-    {
-        match self {
-            Self::Themed => default,
-            Self::Other(t) => *t,
-        }
-    }
-}
-
-impl<T> From<Option<T>> for ThemeComponent<T> {
-    fn from(value: Option<T>) -> Self {
-        match value {
-            None => ThemeComponent::Themed,
-            Some(t) => ThemeComponent::Other(t),
-        }
-    }
-}
-
-fn setup_theme(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn theme_init_system(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Create a camera
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d::default());
 
     let text_font_regular = asset_server.load("fonts/OpenSans-Regular.ttf");
     let text_font_bold = asset_server.load("fonts/OpenSans-Bold.ttf");
@@ -127,14 +98,14 @@ fn setup_theme(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(app_theme);
 }
 
-fn window_theme_system(
+fn theme_change_system(
     mut ev_window_theme_changed: EventReader<WindowThemeChanged>,
-    asset_server: Res<AssetServer>,
+    current_theme: Res<Theme>,
     mut commands: Commands,
 ) {
     for ev in ev_window_theme_changed.read() {
-        let text_font_regular = asset_server.load("fonts/OpenSans-Regular.ttf");
-        let text_font_bold = asset_server.load("fonts/OpenSans-Bold.ttf");
+        let text_font_regular = current_theme.text_font_regular.clone();
+        let text_font_bold = current_theme.text_font_bold.clone();
 
         let app_theme: Theme = match ev.theme {
             WindowTheme::Dark => Theme::dark(text_font_regular, text_font_bold),
@@ -146,171 +117,6 @@ fn window_theme_system(
     }
 }
 
-// TODO - Maybe a set of these components would be useful?
-
-#[derive(Component)]
-pub struct UseThemeTextColorForBackground;
-
-fn themed_text_init_system(
-    theme: Res<Theme>,
-    mut themed_text_query: Query<
-        (
-            &mut Text,
-            &ThemeComponent<FontWeight>,
-            &ThemeComponent<FontColor>,
-        ),
-        (
-            Added<ThemeComponent<FontWeight>>,
-            Added<ThemeComponent<FontColor>>,
-        ),
-    >,
-    mut background_color_query: Query<&mut BackgroundColor, Added<UseThemeTextColorForBackground>>,
-) {
-    for (mut text, tc_font_weight, tc_font_color) in themed_text_query.iter_mut() {
-        let text_style = &mut text.sections[0].style;
-        text_style.font = match tc_font_weight.other_or(FontWeight::Regular) {
-            FontWeight::Bold => theme.text_font_bold.clone(),
-            FontWeight::Regular => theme.text_font_regular.clone(),
-        };
-        text_style.color = tc_font_color.other_or(FontColor(theme.text_color)).0;
-    }
-    for mut background_color in background_color_query.iter_mut() {
-        background_color.0 = theme.text_color;
-    }
-}
-
-fn themed_container_init_system(
-    theme: Res<Theme>,
-    mut themed_button_query: Query<
-        (
-            &mut Style,
-            &mut BorderColor,
-            &mut BorderRadius,
-            &mut BackgroundColor,
-            &ThemeComponent<UiRect>,
-            &ThemeComponent<BorderColor>,
-            &ThemeComponent<BorderRadius>,
-            &ThemeComponent<BackgroundColor>,
-        ),
-        (
-            Added<ThemeComponent<UiRect>>,
-            Added<ThemeComponent<BorderColor>>,
-            Added<ThemeComponent<BorderRadius>>,
-            Added<ThemeComponent<BackgroundColor>>,
-        ),
-    >,
-) {
-    for (
-        mut style,
-        mut border_color,
-        mut border_radius,
-        mut background_color,
-        tc_border_rect,
-        tc_border_color,
-        tc_border_radius,
-        tc_background_color,
-    ) in themed_button_query.iter_mut()
-    {
-        style.border = tc_border_rect.other_or(theme.border_rect);
-        *border_color = tc_border_color.other_or(theme.border_color);
-        *border_radius = tc_border_radius.other_or(theme.border_radius);
-        *background_color = tc_background_color.other_or(theme.button_normal_background);
-    }
-}
-
-fn theme_change_system(
-    theme: Res<Theme>,
-    mut clear_color: ResMut<ClearColor>,
-    mut themed_button_query: Query<(
-        &mut Style,
-        &mut BorderColor,
-        &mut BorderRadius,
-        &mut BackgroundColor,
-        &ThemeComponent<UiRect>,
-        &ThemeComponent<BorderColor>,
-        &ThemeComponent<BorderRadius>,
-        &ThemeComponent<BackgroundColor>,
-    )>,
-    mut themed_text_query: Query<(
-        &mut Text,
-        &ThemeComponent<FontWeight>,
-        &ThemeComponent<FontColor>,
-    )>,
-    mut background_color_query: Query<
-        &mut BackgroundColor,
-        (
-            With<UseThemeTextColorForBackground>,
-            Without<ThemeComponent<BackgroundColor>>,
-        ),
-    >,
-) {
+fn clear_color_system(mut clear_color: ResMut<ClearColor>, theme: Res<Theme>) {
     clear_color.0 = theme.clear_color;
-    for (
-        mut style,
-        mut border_color,
-        mut border_radius,
-        mut background_color,
-        tc_border_rect,
-        tc_border_color,
-        tc_border_radius,
-        tc_background_color,
-    ) in themed_button_query.iter_mut()
-    {
-        style.border = tc_border_rect.other_or(theme.border_rect);
-        *border_color = tc_border_color.other_or(theme.border_color);
-        *border_radius = tc_border_radius.other_or(theme.border_radius);
-        *background_color = tc_background_color.other_or(theme.button_normal_background);
-    }
-    for (mut text, tc_font_weight, tc_font_color) in themed_text_query.iter_mut() {
-        let text_style = &mut text.sections[0].style;
-        text_style.font = match tc_font_weight.other_or(FontWeight::Regular) {
-            FontWeight::Bold => theme.text_font_bold.clone(),
-            FontWeight::Regular => theme.text_font_regular.clone(),
-        };
-        text_style.color = tc_font_color.other_or(FontColor(theme.text_color)).0;
-    }
-    for mut background_color in background_color_query.iter_mut() {
-        background_color.0 = theme.text_color;
-    }
-}
-
-fn themed_button_interaction_system(
-    theme: Res<Theme>,
-    mut themed_button_query: Query<
-        (
-            &mut BackgroundColor,
-            &Interaction,
-            &ThemeComponent<BackgroundColor>,
-        ),
-        (
-            Changed<Interaction>,
-            With<ThemeComponent<BackgroundColor>>,
-            With<Button>,
-        ),
-    >,
-) {
-    for (mut background_color, interaction, tc_background_color) in themed_button_query.iter_mut() {
-        *background_color = match *interaction {
-            Interaction::None => tc_background_color.other_or(theme.button_normal_background),
-            Interaction::Hovered => theme.button_hovered_background,
-            Interaction::Pressed => theme.button_pressed_background,
-        };
-    }
-}
-
-fn focus_outline_system(
-    theme: Res<Theme>,
-    focused_entity: Res<FocusedEntity>,
-    mut border_query: Query<&mut BorderColor>,
-) {
-    if let Some(last) = focused_entity.last {
-        if let Ok(mut last_border) = border_query.get_mut(last) {
-            *last_border = theme.border_color;
-        }
-    }
-    if let Some(current) = focused_entity.current {
-        if let Ok(mut current_border) = border_query.get_mut(current) {
-            *current_border = BorderColor(theme.button_pressed_background.0);
-        }
-    }
 }

@@ -1,69 +1,51 @@
-use bevy::{prelude::*, text::BreakLineOn};
-use derive_builder::Builder;
+use bevy::prelude::*;
 
-use super::ThemeComponent;
+use crate::plugins::common::widgets::text_input::TextInputCursor;
 
-#[derive(Default, Clone, Copy)]
-pub enum FontWeight {
+use super::{Theme, Themed};
+
+#[derive(Component, Default, Clone, Copy)]
+#[require(Themed, TextFont)]
+pub enum ThemedFontWeight {
     #[default]
     Regular,
     Bold,
 }
 
-#[derive(Default, Clone, Copy)]
-pub(super) struct FontColor(pub(super) Color);
-
-#[derive(Bundle)]
-pub struct ThemedTextBundle {
-    font_weight: ThemeComponent<FontWeight>,
-    font_color: ThemeComponent<FontColor>,
-    text_bundle: TextBundle,
+/// Sets and changes the text color and font using the theme
+pub fn themed_text_plugin(app: &mut App) {
+    app.add_systems(Update, themed_text_system);
 }
 
-#[derive(Builder)]
-#[builder(name = "ThemedTextBundleBuilder", build_fn(skip), default, public)]
-struct _ThemedTextBundleBuilderBase {
-    value: String,
-    font_weight: FontWeight,
-    font_size: f32,
-    font_color: FontColor,
-    background_color: BackgroundColor,
-    line_break_behavior: BreakLineOn,
-    style: Style,
-    justify_text: JustifyText,
-}
-
-impl ThemedTextBundleBuilder {
-    pub fn build(&self) -> ThemedTextBundle {
-        let ThemedTextBundleBuilder {
-            value,
-            font_weight,
-            font_size,
-            font_color,
-            background_color,
-            line_break_behavior,
-            style,
-            justify_text,
-        } = self;
-        ThemedTextBundle {
-            font_weight: font_weight.clone().into(),
-            font_color: font_color.clone().into(),
-            text_bundle: TextBundle {
-                style: style.clone().unwrap_or_default(),
-                text: Text {
-                    sections: vec![TextSection {
-                        value: value.clone().unwrap_or_default(),
-                        style: TextStyle {
-                            font_size: font_size.unwrap_or_default(),
-                            ..default()
-                        },
-                    }],
-                    justify: justify_text.unwrap_or_default(),
-                    linebreak_behavior: line_break_behavior.unwrap_or_default(),
-                },
-                background_color: background_color.unwrap_or_default(),
-                ..default()
-            },
-        }
+/// Sets and changes the text color and font using the theme
+fn themed_text_system(
+    theme: Res<Theme>,
+    mut themed_text_color_query: Query<&mut TextColor, With<Themed>>,
+    mut themed_font_weight_query: Query<(&mut TextFont, &ThemedFontWeight)>,
+    mut text_cusor_query: Query<&mut BackgroundColor, With<TextInputCursor>>,
+) {
+    for mut text_color in themed_text_color_query
+        .iter_mut()
+        .filter(|text_color| theme.is_changed() || text_color.is_added())
+    {
+        text_color.0 = theme.text_color;
+    }
+    for (mut text_font, font_weight) in themed_font_weight_query
+        .iter_mut()
+        .filter(|(text_font, _)| theme.is_changed() || text_font.is_added())
+    {
+        text_font.font = match font_weight {
+            ThemedFontWeight::Regular => theme.text_font_regular.clone(),
+            ThemedFontWeight::Bold => theme.text_font_bold.clone(),
+        };
+    }
+    for mut text_input_cursor_background_color in
+        text_cusor_query
+            .iter_mut()
+            .filter(|text_input_cursor_background_color| {
+                theme.is_changed() || text_input_cursor_background_color.is_added()
+            })
+    {
+        text_input_cursor_background_color.0 = theme.text_color;
     }
 }

@@ -28,7 +28,7 @@ pub enum MenuState {
 }
 
 // Measured the width of the character "0" on my mac when it was 16px tall.
-pub const CH: f32 = 10.5;
+pub const PIXELS_PER_CH: f32 = 10.5;
 
 fn menu_setup(
     mut game_state: ResMut<NextState<GameState>>,

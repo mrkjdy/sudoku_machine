@@ -3,12 +3,12 @@ use strum_macros::Display;
 
 use crate::{plugins::menu::MenuState, AppState};
 
-use super::common::theme::{button::ThemedButtonBundleBuilder, text::ThemedTextBundleBuilder};
+use super::common::theme::Themed;
 
 pub fn nav_plugin(app: &mut App) {
     app.init_state::<NavState>()
         .add_systems(Startup, nav_setup)
-        .add_systems(Update, nav_icon_system)
+        .add_systems(Update, nav_icon_system.run_if(state_changed::<NavState>))
         .add_systems(Update, nav_button_action);
 }
 
@@ -30,18 +30,17 @@ impl From<NavState> for String {
 }
 
 #[derive(Component)]
+#[require(Themed, Button)]
 struct NavButton;
 
 #[derive(Component)]
+#[require(Themed, Text)]
 struct NavButtonIcon;
 
-fn nav_setup(
-    mut commands: Commands,
-    // asset_server: Res<AssetServer>,
-) {
-    // Setup the nav component
-    let nav_button = ThemedButtonBundleBuilder::default()
-        .style(Style {
+fn nav_setup(mut commands: Commands) {
+    let nav_button_bundle = (
+        NavButton,
+        Node {
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             padding: UiRect::all(Val::Px(5.0)),
@@ -49,37 +48,27 @@ fn nav_setup(
             left: Val::Px(20.0),
             top: Val::Px(20.0),
             ..default()
-        })
-        .build();
+        },
+    );
 
-    // Add an initial icon to the button
-    // TODO - Use an SVG. Consult bevy_ui to figure out how to make a styled UI svg bundle.
-    let nav_button_icon = ThemedTextBundleBuilder::default()
-        .value(NavState::default().into())
-        .font_size(60.0)
-        .build();
+    // TODO - use SVGs instead of text
+    let nav_button_icon_bundle = (
+        NavButtonIcon,
+        Text::new(NavState::default()),
+        TextFont::from_font_size(60.0),
+    );
 
     commands
-        .spawn((nav_button, NavButton))
-        .with_children(|parent| {
-            parent.spawn((nav_button_icon, NavButtonIcon));
-        });
+        .spawn(nav_button_bundle)
+        .with_child(nav_button_icon_bundle);
 }
 
 fn nav_icon_system(
     mut nav_button_icon_query: Query<&mut Text, With<NavButtonIcon>>,
     nav_state: Res<State<NavState>>,
-    // asset_server: Res<AssetServer>,
 ) {
-    if nav_state.is_changed() {
-        let mut text = nav_button_icon_query.single_mut();
-        // *svg_handle = match *nav_state.get() {
-        //     NavState::Back => asset_server.load("icons/arrow-uturn-left.svg"),
-        //     NavState::Exit => asset_server.load("icons/x-mark.svg"),
-        //     NavState::Pause => asset_server.load("icons/pause.svg"),
-        // };
-        text.sections[0].value = nav_state.get().to_string();
-    }
+    let mut text = nav_button_icon_query.single_mut();
+    text.0 = nav_state.get().to_string();
 }
 
 fn nav_button_action(
@@ -89,18 +78,19 @@ fn nav_button_action(
     mut app_exit_events: EventWriter<AppExit>,
     mut app_state: ResMut<NextState<AppState>>,
 ) {
-    for interaction in &interaction_query {
-        if *interaction == Interaction::Pressed {
-            match *nav_state.get() {
-                NavState::Back => {
-                    menu_state.set(MenuState::Home);
-                }
-                NavState::Exit => {
-                    app_exit_events.send(AppExit::Success);
-                }
-                NavState::Pause => {
-                    app_state.set(AppState::Menu);
-                }
+    for _ in interaction_query
+        .iter()
+        .filter(|interaction| **interaction == Interaction::Pressed)
+    {
+        match *nav_state.get() {
+            NavState::Back => {
+                menu_state.set(MenuState::Home);
+            }
+            NavState::Exit => {
+                app_exit_events.send(AppExit::Success);
+            }
+            NavState::Pause => {
+                app_state.set(AppState::Menu);
             }
         }
     }

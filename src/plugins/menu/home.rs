@@ -5,16 +5,13 @@ use strum_macros::{Display, EnumIter};
 use crate::{
     despawn_component,
     plugins::{
-        common::theme::{
-            button::ThemedButtonBundleBuilder,
-            text::{FontWeight, ThemedTextBundleBuilder},
-        },
+        common::theme::{text::ThemedFontWeight, Themed},
         nav::NavState,
     },
     AppState, APP_TITLE,
 };
 
-use super::MenuState;
+use super::{MenuState, PIXELS_PER_CH};
 
 pub fn home_menu_plugin(app: &mut App) {
     app.add_systems(OnEnter(MenuState::Home), home_menu_setup)
@@ -22,13 +19,18 @@ pub fn home_menu_plugin(app: &mut App) {
             Update,
             (home_menu_action_system).run_if(in_state(MenuState::Home)),
         )
-        .add_systems(OnExit(MenuState::Home), despawn_component::<HomeMenu>);
+        .add_systems(
+            OnExit(MenuState::Home),
+            despawn_component::<HomeMenuContainer>,
+        );
 }
 
 #[derive(Component)]
-struct HomeMenu;
+#[require(Node)]
+struct HomeMenuContainer;
 
 #[derive(Component, EnumIter, Display)]
+#[require(Themed, Button)]
 enum HomeMenuButton {
     Continue,
     #[strum(to_string = "New Puzzle")]
@@ -39,8 +41,9 @@ enum HomeMenuButton {
 fn home_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Commands) {
     nav_state.set(NavState::Exit);
 
-    let home_menu_container = NodeBundle {
-        style: Style {
+    let container_bundle = (
+        HomeMenuContainer,
+        Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
             align_items: AlignItems::Center,
@@ -49,48 +52,43 @@ fn home_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Com
             row_gap: Val::Px(20.0),
             ..default()
         },
-        ..default()
-    };
+    );
 
-    let game_title = ThemedTextBundleBuilder::default()
-        .value(APP_TITLE.into())
-        .font_size(80.0)
-        .font_weight(FontWeight::Bold)
-        .style(Style {
+    let title_bundle = (
+        Text::new(APP_TITLE),
+        TextFont::from_font_size(80.0),
+        Node {
             margin: UiRect::all(Val::Px(50.0)),
             ..default()
-        })
-        .build();
+        },
+        ThemedFontWeight::Bold,
+    );
 
-    let button_style = Style {
-        justify_content: JustifyContent::Center,
-        align_items: AlignItems::Center,
-        padding: UiRect::vertical(Val::Px(5.0)),
-        width: Val::Px(240.0),
-        ..default()
-    };
+    let button_bundles = HomeMenuButton::iter().map(|home_menu_button| {
+        let button_text_bundle = (
+            Themed,
+            Text::new(home_menu_button.to_string()),
+            TextFont::from_font_size(40.0),
+        );
+        let button_bundle = (
+            home_menu_button,
+            Node {
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                padding: UiRect::vertical(Val::Px(5.0)),
+                width: Val::Px(32.0 * PIXELS_PER_CH),
+                ..default()
+            },
+        );
+        (button_bundle, button_text_bundle)
+    });
 
-    let home_menu_button = ThemedButtonBundleBuilder::default()
-        .style(button_style)
-        .build();
-
-    commands
-        .spawn((home_menu_container, HomeMenu))
-        .with_children(|parent| {
-            parent.spawn(game_title);
-            for button in HomeMenuButton::iter() {
-                let button_text = button.to_string();
-                parent
-                    .spawn((home_menu_button.clone(), button))
-                    .with_children(|parent| {
-                        let button_text_bundle = ThemedTextBundleBuilder::default()
-                            .value(button_text)
-                            .font_size(40.0)
-                            .build();
-                        parent.spawn(button_text_bundle);
-                    });
-            }
-        });
+    commands.spawn(container_bundle).with_children(|parent| {
+        parent.spawn(title_bundle);
+        for (button_bundle, button_text_bundle) in button_bundles {
+            parent.spawn(button_bundle).with_child(button_text_bundle);
+        }
+    });
 }
 
 fn home_menu_action_system(
@@ -98,19 +96,20 @@ fn home_menu_action_system(
     mut menu_state: ResMut<NextState<MenuState>>,
     mut app_state: ResMut<NextState<AppState>>,
 ) {
-    for (interaction, menu_button) in &interaction_query {
-        if *interaction == Interaction::Pressed {
-            match menu_button {
-                HomeMenuButton::Continue => {
-                    app_state.set(AppState::Game);
-                    menu_state.set(MenuState::Disabled);
-                }
-                HomeMenuButton::History => {
-                    menu_state.set(MenuState::History);
-                }
-                HomeMenuButton::NewPuzzle => {
-                    menu_state.set(MenuState::NewPuzzle);
-                }
+    for (_, menu_button) in interaction_query
+        .iter()
+        .filter(|(interaction, _)| **interaction == Interaction::Pressed)
+    {
+        match menu_button {
+            HomeMenuButton::Continue => {
+                app_state.set(AppState::Game);
+                menu_state.set(MenuState::Disabled);
+            }
+            HomeMenuButton::History => {
+                menu_state.set(MenuState::History);
+            }
+            HomeMenuButton::NewPuzzle => {
+                menu_state.set(MenuState::NewPuzzle);
             }
         }
     }

@@ -1,45 +1,23 @@
 use bevy::prelude::*;
-use derive_builder::Builder;
 
-use super::ThemeComponent;
+use super::{Theme, Themed};
 
-#[derive(Bundle, Clone)]
-pub struct ThemedButtonBundle {
-    ui_rect: ThemeComponent<UiRect>,
-    border_color: ThemeComponent<BorderColor>,
-    border_radius: ThemeComponent<BorderRadius>,
-    background_color: ThemeComponent<BackgroundColor>,
-    button_bundle: ButtonBundle,
+pub fn themed_button_plugin(app: &mut App) {
+    app.add_systems(Update, themed_button_interaction_system);
 }
 
-#[derive(Builder)]
-#[builder(name = "ThemedButtonBundleBuilder", build_fn(skip), default, public)]
-struct _ThemedButtonBundleBuilderBase {
-    style: Style,
-    ui_rect: UiRect,
-    border_color: BorderColor,
-    border_radius: BorderRadius,
-    background_color: BackgroundColor,
-}
-
-impl ThemedButtonBundleBuilder {
-    pub fn build(&self) -> ThemedButtonBundle {
-        let ThemedButtonBundleBuilder {
-            style,
-            ui_rect,
-            border_color,
-            border_radius,
-            background_color,
-        } = self;
-        ThemedButtonBundle {
-            ui_rect: ui_rect.clone().into(),
-            border_color: border_color.clone().into(),
-            background_color: background_color.clone().into(),
-            border_radius: border_radius.clone().into(),
-            button_bundle: ButtonBundle {
-                style: style.clone().unwrap_or_default(),
-                ..default()
-            },
-        }
+fn themed_button_interaction_system(
+    theme: Res<Theme>,
+    mut themed_button_query: Query<
+        (&mut BackgroundColor, &Interaction),
+        (Changed<Interaction>, (With<Themed>, With<Button>)),
+    >,
+) {
+    for (mut background_color, interaction) in themed_button_query.iter_mut() {
+        *background_color = match *interaction {
+            Interaction::None => theme.button_normal_background,
+            Interaction::Hovered => theme.button_hovered_background,
+            Interaction::Pressed => theme.button_pressed_background,
+        };
     }
 }

@@ -2,9 +2,7 @@ use bevy::{ecs::system::EntityCommands, prelude::*};
 use derive_builder::Builder;
 use strum_macros::Display;
 
-use crate::plugins::common::theme::button::ThemedButtonBundleBuilder;
-use crate::plugins::common::theme::node::ThemedNodeBundleBuilder;
-use crate::plugins::common::theme::text::ThemedTextBundleBuilder;
+use crate::plugins::common::theme::{node::ListItemButton, Themed};
 
 use super::{Spawn, Spawnable};
 
@@ -22,7 +20,8 @@ pub fn dropdown_plugin(app: &mut App) {
 }
 
 #[derive(Default, Component, Clone)]
-pub struct DropdownData {
+#[require(Node)]
+pub struct DropdownContainer {
     pub selected: usize,
     pub options: Vec<String>,
 }
@@ -53,12 +52,12 @@ enum SelectionIcon {
 #[derive(Builder)]
 #[builder(build_fn(skip), default, public)]
 pub struct DropdownWidget {
-    dropdown: DropdownData,
-    font_size: f32,
-    container_style: Style,
-    button_style: Style,
-    button_text_style: Style,
-    list_style: Style,
+    dropdown: DropdownContainer,
+    text_font: TextFont,
+    container_node: Node,
+    button_node: Node,
+    button_text_node: Node,
+    list_node: Node,
     // border_color: BorderColor,
     // border_radius: BorderRadius,
     // background_color: BackgroundColor,
@@ -68,22 +67,22 @@ impl DropdownWidgetBuilder {
     pub fn build(&self) -> DropdownWidget {
         let DropdownWidgetBuilder {
             dropdown,
-            font_size,
-            container_style,
-            button_style,
-            button_text_style,
-            list_style,
+            text_font,
+            container_node,
+            button_node,
+            button_text_node,
+            list_node,
             // border_color,
             // border_radius,
             // background_color,
         } = self;
         DropdownWidget {
             dropdown: dropdown.clone().unwrap_or_default(),
-            font_size: font_size.unwrap_or_default(),
-            container_style: container_style.clone().unwrap_or_default(),
-            button_style: button_style.clone().unwrap_or_default(),
-            button_text_style: button_text_style.clone().unwrap_or_default(),
-            list_style: list_style.clone().unwrap_or_default(),
+            text_font: text_font.clone().unwrap_or_default(),
+            container_node: container_node.clone().unwrap_or_default(),
+            button_node: button_node.clone().unwrap_or_default(),
+            button_text_node: button_text_node.clone().unwrap_or_default(),
+            list_node: list_node.clone().unwrap_or_default(),
             // border_color: border_color.unwrap_or_default(),
             // border_radius: border_radius.unwrap_or_default(),
             // background_color: background_color.unwrap_or_default(),
@@ -92,24 +91,31 @@ impl DropdownWidgetBuilder {
 }
 
 #[derive(Component)]
+#[require(Themed, Button)]
 struct DropdownButton;
 
 #[derive(Component)]
+#[require(Themed, Text)]
 struct DropdownButtonText;
 
 #[derive(Component)]
+#[require(Themed, Text)]
 struct DropdownButtonIcon;
 
 #[derive(Component)]
+#[require(Themed, Node)]
 struct DropdownList;
 
 #[derive(Component)]
+#[require(ListItemButton)]
 struct DropdownListItem(usize);
 
 #[derive(Component)]
+#[require(Themed, Text)]
 struct DropdownListItemText;
 
 #[derive(Component)]
+#[require(Themed, Text)]
 struct DropdownListItemIcon;
 
 impl Spawnable for DropdownWidget {
@@ -120,102 +126,111 @@ impl Spawnable for DropdownWidget {
     ) -> EntityCommands<'a> {
         let DropdownWidget {
             dropdown,
-            container_style,
-            button_style,
-            font_size,
-            button_text_style,
-            list_style,
+            container_node,
+            button_node,
+            text_font,
+            button_text_node,
+            list_node,
             // border_color,
             // border_radius,
             // background_color,
         } = self;
 
-        let container = NodeBundle {
-            style: container_style.clone(),
-            ..default()
-        };
+        let container_bundle = (dropdown.clone(), container_node.clone());
 
-        let button = ThemedButtonBundleBuilder::default()
-            .style(Style {
+        let button_bundle = (
+            Node {
                 justify_content: JustifyContent::SpaceBetween,
                 width: Val::Percent(100.0),
                 align_items: AlignItems::Center,
-                ..button_style.clone()
-            })
-            .build();
+                ..button_node.clone()
+            },
+            DropdownButton,
+        );
 
-        let button_text = ThemedTextBundleBuilder::default()
-            .value(
-                dropdown
-                    .options
-                    .get(dropdown.selected)
-                    .unwrap_or(&"".to_string())
-                    .into(),
-            )
-            .font_size(*font_size)
-            .style(button_text_style.clone())
-            .build();
+        let initial_text = dropdown
+            .options
+            .get(dropdown.selected)
+            .unwrap_or(&"".to_string())
+            .clone();
 
-        let button_icon = ThemedTextBundleBuilder::default()
-            .value(DropdownIcon::Closed.into())
-            .font_size(*font_size)
-            .build();
+        let button_text_bundle = (
+            Text::new(initial_text),
+            text_font.clone(),
+            button_text_node.clone(),
+            DropdownButtonText,
+        );
 
-        let list = ThemedNodeBundleBuilder::default()
-            .style(Style {
+        let button_icon_bundle = (
+            Text::new(DropdownIcon::Closed.to_string()),
+            text_font.clone(),
+            DropdownButtonIcon,
+        );
+
+        let list_container_bundle = (
+            Node {
                 position_type: PositionType::Absolute,
                 flex_direction: FlexDirection::Column,
                 width: Val::Percent(100.0),
-                ..list_style.clone()
+                ..list_node.clone()
+            },
+            BackgroundColor(Color::default()),
+            Visibility::Hidden,
+            DropdownList,
+            GlobalZIndex(100),
+        );
+
+        let list_item_bundles = dropdown
+            .options
+            .iter()
+            .enumerate()
+            .map(|(i, option)| {
+                let list_item_bundle = (
+                    Node {
+                        justify_content: JustifyContent::SpaceBetween,
+                        width: Val::Percent(100.0),
+                        align_items: AlignItems::Center,
+                        ..button_node.clone()
+                    },
+                    DropdownListItem(i),
+                );
+                let list_item_text_bundle = (
+                    Text::new(option.clone()),
+                    text_font.clone(),
+                    DropdownListItemText,
+                );
+                let list_item_icon_text = match i == dropdown.selected {
+                    true => SelectionIcon::Selected,
+                    false => SelectionIcon::Unselected,
+                }
+                .to_string();
+                let list_item_icon_bundle = (
+                    Text::new(list_item_icon_text),
+                    text_font.clone(),
+                    DropdownListItemIcon,
+                );
+                (
+                    list_item_bundle,
+                    list_item_text_bundle,
+                    list_item_icon_bundle,
+                )
             })
-            .z_index(ZIndex::Global(1000))
-            .visibility(Visibility::Hidden)
-            .build();
+            .collect::<Vec<_>>();
 
-        let list_item = ThemedButtonBundleBuilder::default()
-            .style(Style {
-                justify_content: JustifyContent::SpaceBetween,
-                width: Val::Percent(100.0),
-                align_items: AlignItems::Center,
-                ..button_style.clone()
-            })
-            .ui_rect(UiRect::all(Val::ZERO))
-            // .border_color(BorderColor(background_color.0))
-            .build();
-
-        let mut dropdown_list_item_text_builder = ThemedTextBundleBuilder::default();
-        dropdown_list_item_text_builder.font_size(*font_size);
-
-        let mut dropdown_list_item_icon_builder = ThemedTextBundleBuilder::default();
-        dropdown_list_item_icon_builder.font_size(*font_size);
-
-        let mut ec = spawner.spawn((container, dropdown.clone()));
-        ec.insert(components);
+        let mut ec = spawner.spawn((container_bundle, components));
         ec.with_children(|parent| {
-            parent
-                .spawn((button, DropdownButton))
-                .with_children(|parent| {
-                    parent.spawn((button_text, DropdownButtonText));
-                    parent.spawn((button_icon, DropdownButtonIcon));
-                });
-            parent.spawn((list, DropdownList)).with_children(|parent| {
-                for (i, option) in dropdown.options.iter().enumerate() {
-                    parent
-                        .spawn((list_item.clone(), DropdownListItem(i)))
-                        .with_children(|parent| {
-                            let dropdown_list_item_text =
-                                dropdown_list_item_text_builder.value(option.into()).build();
-                            parent.spawn((dropdown_list_item_text, DropdownListItemText));
-                            let icon_text = if i == dropdown.selected {
-                                SelectionIcon::Selected
-                            } else {
-                                SelectionIcon::Unselected
-                            }
-                            .to_string();
-                            let dropdown_list_item_icon =
-                                dropdown_list_item_icon_builder.value(icon_text).build();
-                            parent.spawn((dropdown_list_item_icon, DropdownListItemIcon));
-                        });
+            ChildBuild::spawn(parent, button_bundle).with_children(|parent| {
+                ChildBuild::spawn(parent, button_text_bundle);
+                ChildBuild::spawn(parent, button_icon_bundle);
+            });
+            ChildBuild::spawn(parent, list_container_bundle).with_children(|parent| {
+                for (list_item_bundle, list_item_text_bundle, list_item_icon_bundle) in
+                    list_item_bundles
+                {
+                    ChildBuild::spawn(parent, list_item_bundle).with_children(|parent| {
+                        ChildBuild::spawn(parent, list_item_text_bundle);
+                        ChildBuild::spawn(parent, list_item_icon_bundle);
+                    });
                 }
             });
         });
@@ -224,7 +239,7 @@ impl Spawnable for DropdownWidget {
 }
 
 fn dropdown_button_text_system(
-    container_query: Query<(&DropdownData, &Children), Changed<DropdownData>>,
+    container_query: Query<(&DropdownContainer, &Children), Changed<DropdownContainer>>,
     button_query: Query<&Children, With<DropdownButton>>,
     mut button_text_query: Query<&mut Text, With<DropdownButtonText>>,
 ) {
@@ -235,13 +250,13 @@ fn dropdown_button_text_system(
         // Set the button text
         let button_text_id = button_children[0];
         let mut button_text = button_text_query.get_mut(button_text_id).unwrap();
-        button_text.sections[0].value = dropdown.options[dropdown.selected].clone();
+        button_text.0 = dropdown.options[dropdown.selected].clone();
     }
 }
 
 fn dropdown_button_icon_system(
     list_query: Query<(&Parent, &Visibility), (Changed<Visibility>, With<DropdownList>)>,
-    container_query: Query<&Children, With<DropdownData>>,
+    container_query: Query<&Children, With<DropdownContainer>>,
     button_query: Query<&Children, With<DropdownButton>>,
     mut button_icon_query: Query<&mut Text, With<DropdownButtonIcon>>,
 ) {
@@ -255,7 +270,7 @@ fn dropdown_button_icon_system(
         // Set the corresponding icon
         let button_icon_id = button_children[1];
         let mut button_icon = button_icon_query.get_mut(button_icon_id).unwrap();
-        button_icon.sections[0].value = match *list_visibility {
+        button_icon.0 = match *list_visibility {
             Visibility::Visible => DropdownIcon::Open,
             _ => DropdownIcon::Closed,
         }
@@ -266,7 +281,7 @@ fn dropdown_button_icon_system(
 fn dropdown_list_visibility_system(
     buttons: Res<ButtonInput<MouseButton>>,
     button_query: Query<(&Interaction, &Parent), With<DropdownButton>>,
-    container_query: Query<&Children, With<DropdownData>>,
+    container_query: Query<&Children, With<DropdownContainer>>,
     mut list_query: Query<&mut Visibility, With<DropdownList>>,
 ) {
     if buttons.get_just_pressed().len() <= 0 {
@@ -295,7 +310,7 @@ fn dropdown_list_selection_system(
         Changed<Interaction>,
     >,
     list_query: Query<(&Parent, &Children), With<DropdownList>>,
-    mut container_query: Query<&mut DropdownData>,
+    mut container_query: Query<&mut DropdownContainer>,
     previous_list_item_query: Query<&Children, With<DropdownListItem>>,
     mut list_item_icon_query: Query<&mut Text, With<DropdownListItemIcon>>,
 ) {
@@ -318,7 +333,7 @@ fn dropdown_list_selection_system(
         let mut previous_list_item_icon = list_item_icon_query
             .get_mut(previous_list_item_icon_id)
             .unwrap();
-        previous_list_item_icon.sections[0].value = SelectionIcon::Unselected.to_string();
+        previous_list_item_icon.0 = SelectionIcon::Unselected.to_string();
         // Change the selected option in the container
         dropdown_container.selected = list_item.0;
         // Add the selected icon to the newly selected option
@@ -326,21 +341,23 @@ fn dropdown_list_selection_system(
         let mut pressed_list_item_icon = list_item_icon_query
             .get_mut(pressed_list_item_icon_id)
             .unwrap();
-        pressed_list_item_icon.sections[0].value = SelectionIcon::Selected.to_string();
+        pressed_list_item_icon.0 = SelectionIcon::Selected.to_string();
     }
 }
 
 fn dropdown_list_position_system(
-    button_query: Query<(&Parent, &Node), (Changed<Node>, With<DropdownButton>)>,
-    container_query: Query<&Children, With<DropdownData>>,
-    mut list_query: Query<&mut Style, With<DropdownList>>,
+    button_query: Query<
+        (&Parent, &Node),
+        (Changed<Node>, With<DropdownButton>, Without<DropdownList>),
+    >,
+    container_query: Query<&Children, With<DropdownContainer>>,
+    mut list_query: Query<&mut Node, With<DropdownList>>,
 ) {
     for (button_parent, button_node) in button_query.iter() {
         let container_id = button_parent.get();
         let container_children = container_query.get(container_id).unwrap();
         let mut list_style = list_query.get_mut(container_children[1]).unwrap();
-        let button_size = button_node.size();
-        list_style.top = Val::Px(button_size.y);
+        list_style.top = button_node.height;
     }
 }
 
