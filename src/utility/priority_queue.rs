@@ -249,16 +249,6 @@ impl<P: Ord + Debug> PriorityQueue<P> {
     }
 }
 
-// impl<P: Ord + Debug + Copy> PriorityQueue<P> {
-//     /// Initialize the map with the given value up to the required length. Assumes that the
-//     pub fn init_map_with(&mut self, required_len: usize, val: P) {
-//         let current_len = self.map.len();
-//         let iter = (current_len..required_len).map(|i| Some((current_len + i, val)));
-//         self.map.extend(iter);
-//         self.heap.extend(current_len..required_len);
-//     }
-// }
-
 impl<P, I> From<I> for PriorityQueue<P>
 where
     P: Ord + Debug,

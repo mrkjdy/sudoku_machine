@@ -74,9 +74,6 @@ impl Spawnable for TextInputWidget {
             text_font,
             container_node,
             text_node,
-            // justify_text,
-            // no_cursor,
-            // background_color,
         } = self;
 
         let container_bundle = (
@@ -89,7 +86,6 @@ impl Spawnable for TextInputWidget {
                 align_items: AlignItems::Center,
                 ..container_node.clone()
             },
-            // BackgroundColor(background_color.clone())
         );
 
         let text_bundle = (
@@ -243,10 +239,6 @@ fn typing_system(
             Key::Backspace => {
                 text_input_value.pop();
             }
-            // // Ignore any input that contains control (special) characters?
-            // Key::Character(input) if input.chars().any(|c| c.is_control()) => {
-            //     continue;
-            // }
             Key::Character(input) if keys.any_pressed(control_keys) => {
                 match input.as_str() {
                     "c" => {

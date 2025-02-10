@@ -688,30 +688,4 @@ mod tests {
             MINIMUM_PUZZLE_STR.replace("\n", "    \n")
         );
     }
-
-    // #[test]
-    // fn print_puzzle() {
-    //     let puzzle = ClassicPuzzle::from_seed("Hi!".to_string());
-    //     println!("{}", puzzle.to_string());
-    // }
-
-    // #[test]
-    // fn minimum_clues() {
-    //     let mut rng: SipRng = SipHasher::from("test").into_rng();
-    //     let mut min_clues = 81;
-    //     loop {
-    //         let mut puzzle = ClassicPuzzle::new();
-    //         puzzle.fill_from_rng(&mut rng);
-    //         puzzle.remove_from_rng(&mut rng);
-    //         let num_clues = puzzle.num_clues();
-    //         if num_clues < min_clues {
-    //             println!("Found puzzle with {} clues", num_clues);
-    //             println!("{}", puzzle.to_string());
-    //             min_clues = num_clues;
-    //         }
-    //         if num_clues <= 22 {
-    //             break;
-    //         }
-    //     }
-    // }
 }
