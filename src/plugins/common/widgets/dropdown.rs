@@ -1,5 +1,4 @@
 use bevy::{ecs::system::EntityCommands, prelude::*};
-use derive_builder::Builder;
 use strum_macros::Display;
 
 use crate::plugins::common::theme::{node::ListItemButton, Themed};
@@ -49,45 +48,14 @@ enum SelectionIcon {
     Unselected,
 }
 
-#[derive(Builder)]
-#[builder(build_fn(skip), default, public)]
+#[derive(Default)]
 pub struct DropdownWidget {
-    dropdown: DropdownContainer,
-    text_font: TextFont,
-    container_node: Node,
-    button_node: Node,
-    button_text_node: Node,
-    list_node: Node,
-    // border_color: BorderColor,
-    // border_radius: BorderRadius,
-    // background_color: BackgroundColor,
-}
-
-impl DropdownWidgetBuilder {
-    pub fn build(&self) -> DropdownWidget {
-        let DropdownWidgetBuilder {
-            dropdown,
-            text_font,
-            container_node,
-            button_node,
-            button_text_node,
-            list_node,
-            // border_color,
-            // border_radius,
-            // background_color,
-        } = self;
-        DropdownWidget {
-            dropdown: dropdown.clone().unwrap_or_default(),
-            text_font: text_font.clone().unwrap_or_default(),
-            container_node: container_node.clone().unwrap_or_default(),
-            button_node: button_node.clone().unwrap_or_default(),
-            button_text_node: button_text_node.clone().unwrap_or_default(),
-            list_node: list_node.clone().unwrap_or_default(),
-            // border_color: border_color.unwrap_or_default(),
-            // border_radius: border_radius.unwrap_or_default(),
-            // background_color: background_color.unwrap_or_default(),
-        }
-    }
+    pub dropdown: DropdownContainer,
+    pub text_font: TextFont,
+    pub container_node: Node,
+    pub button_node: Node,
+    pub button_text_node: Node,
+    pub list_node: Node,
 }
 
 #[derive(Component)]
@@ -131,9 +99,6 @@ impl Spawnable for DropdownWidget {
             text_font,
             button_text_node,
             list_node,
-            // border_color,
-            // border_radius,
-            // background_color,
         } = self;
 
         let container_bundle = (dropdown.clone(), container_node.clone());

@@ -7,7 +7,6 @@ edition = "2021"
 arboard = "3.4.0"
 bevy = { version = "0.15", features = ["dynamic_linking"] }
 dark-light = "1.1.1"
-derive_builder = "0.20.1"
 fastrand = "2.1.1"
 num_enum = "0.7.3"
 rand = "0.8.5"

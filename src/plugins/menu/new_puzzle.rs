@@ -7,8 +7,8 @@ use crate::{
         common::{
             theme::{text::ThemedFontWeight, Themed},
             widgets::{
-                dropdown::{self, DropdownContainer, DropdownWidgetBuilder},
-                text_input::{text_input_plugin, TextInputContainer, TextInputWidgetBuilder},
+                dropdown::{self, DropdownContainer, DropdownWidget},
+                text_input::{text_input_plugin, TextInputContainer, TextInputWidget},
                 Spawnable,
             },
         },
@@ -100,23 +100,24 @@ fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut command
 
     let type_subtitle_bundle = (Text::new("Type"), subtitle_bundle.clone());
 
-    let type_dropdown_widget_builder = DropdownWidgetBuilder::default()
-        .dropdown(DropdownContainer {
+    let type_dropdown_widget = DropdownWidget {
+        dropdown: DropdownContainer {
             selected: initial_selected_type as usize,
             options: PuzzleType::iter().map(|o| o.to_string()).collect(),
-        })
-        .text_font(TextFont::from_font_size(body_font_size))
-        .container_node(Node {
+        },
+        text_font: TextFont::from_font_size(body_font_size),
+        container_node: Node {
             width,
             max_width,
             margin,
             ..default()
-        })
-        .button_node(Node {
+        },
+        button_node: Node {
             padding: UiRect::all(Val::Px(5.0)),
             ..default()
-        })
-        .build();
+        },
+        ..Default::default()
+    };
 
     let description_subtitle_bundle = (Text::new("Description"), subtitle_bundle.clone());
 
@@ -134,20 +135,21 @@ fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut command
 
     let seed_subtitle_bundle = (Text::new("Seed"), subtitle_bundle.clone());
 
-    let seed_text_input_widget_builder = TextInputWidgetBuilder::default()
-        .container_node(Node {
+    let seed_text_input_widget = TextInputWidget {
+        text_input_container: TextInputContainer {
+            placeholder_text: "Random...".into(),
+            ..default()
+        },
+        text_font: TextFont::from_font_size(body_font_size),
+        container_node: Node {
             margin: UiRect::bottom(Val::Px(40.0)),
             padding: UiRect::horizontal(Val::Px(5.0)),
             width,
             max_width,
             ..default()
-        })
-        .text_font(TextFont::from_font_size(body_font_size))
-        .text_input_container(TextInputContainer {
-            placeholder_text: "Random...".into(),
-            ..default()
-        })
-        .build();
+        },
+        ..Default::default()
+    };
 
     let start_button_bundle = (
         StartButton,
@@ -169,13 +171,13 @@ fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut command
             parent.spawn(menu_title_bundle);
 
             parent.spawn(type_subtitle_bundle);
-            type_dropdown_widget_builder.spawn_with_components(parent, PuzzleTypeDropdown);
+            type_dropdown_widget.spawn_with_components(parent, PuzzleTypeDropdown);
 
             parent.spawn(description_subtitle_bundle);
             parent.spawn(description_text_bundle);
 
             parent.spawn(seed_subtitle_bundle);
-            seed_text_input_widget_builder.spawn_with_components(parent, SeedTextInput);
+            seed_text_input_widget.spawn_with_components(parent, SeedTextInput);
 
             // Start button
             parent

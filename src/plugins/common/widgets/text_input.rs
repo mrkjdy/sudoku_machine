@@ -3,7 +3,6 @@ use bevy::input::keyboard::Key;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::input::ButtonState;
 use bevy::prelude::*;
-use derive_builder::Builder;
 
 use crate::plugins::common::theme::focus::FocusedEntity;
 use crate::plugins::common::theme::Themed;
@@ -48,36 +47,12 @@ impl Default for TextInputContainer {
     }
 }
 
-#[derive(Builder)]
-#[builder(build_fn(skip), default, public)]
+#[derive(Default)]
 pub struct TextInputWidget {
-    text_input_container: TextInputContainer,
-    text_font: TextFont,
-    container_node: Node,
-    text_node: Node,
-    // justify_text: JustifyText,
-    // background_color: ThemeComponent<BackgroundColor>,
-}
-
-impl TextInputWidgetBuilder {
-    pub fn build(&self) -> TextInputWidget {
-        let TextInputWidgetBuilder {
-            text_input_container,
-            text_font,
-            container_node,
-            text_node,
-            // justify_text,
-            // background_color,
-        } = self;
-        TextInputWidget {
-            text_input_container: text_input_container.clone().unwrap_or_default(),
-            text_font: text_font.clone().unwrap_or_default(),
-            container_node: container_node.clone().unwrap_or_default(),
-            text_node: text_node.clone().unwrap_or_default(),
-            // justify_text: justify_text.clone().unwrap_or_default(),
-            // background_color: background_color.clone().unwrap_or_default(),
-        }
-    }
+    pub text_input_container: TextInputContainer,
+    pub text_font: TextFont,
+    pub container_node: Node,
+    pub text_node: Node,
 }
 
 #[derive(Component)]
