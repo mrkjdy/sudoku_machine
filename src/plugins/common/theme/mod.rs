@@ -82,7 +82,7 @@ pub fn theme_plugin(app: &mut App) {
 
 fn theme_init_system(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Create a camera
-    commands.spawn(Camera2d::default());
+    commands.spawn(Camera2d);
 
     let text_font_regular = asset_server.load("fonts/OpenSans-Regular.ttf");
     let text_font_bold = asset_server.load("fonts/OpenSans-Bold.ttf");

@@ -34,7 +34,7 @@ fn classic_puzzle_setup(
     println!("Seed is {:}", puzzle_settings.seed);
     let puzzle = ClassicPuzzle::from_seed(puzzle_settings.seed.clone());
     println!("Finished:");
-    println!("{:}", puzzle.to_string());
+    println!("{:}", puzzle);
 }
 
 fn classic_game_action_system() {}

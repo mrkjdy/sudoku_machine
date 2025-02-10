@@ -115,7 +115,7 @@ impl Spawnable for TextInputWidget {
             parent.spawn(text_bundle);
             parent.spawn(cursor_bundle);
         });
-        return ec;
+        ec
     }
 }
 
@@ -251,7 +251,7 @@ fn typing_system(
                 };
             }
             Key::Character(input) => {
-                text_input_value.push_str(&input);
+                text_input_value.push_str(input);
             }
             Key::Space => {
                 text_input_value.push(' ');

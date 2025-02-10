@@ -6,6 +6,7 @@ pub fn themed_button_plugin(app: &mut App) {
     app.add_systems(Update, themed_button_interaction_system);
 }
 
+#[allow(clippy::type_complexity)]
 fn themed_button_interaction_system(
     theme: Res<Theme>,
     mut themed_button_query: Query<

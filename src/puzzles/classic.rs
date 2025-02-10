@@ -28,6 +28,12 @@ type CellCoords = (u8, u8, u8);
 type CellIndex = u8;
 type CellValue = Option<u8>;
 
+impl Default for ClassicPuzzle {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ClassicPuzzle {
     /// Creates a new, blank, classic 9x9 Sudoku board
     pub fn new() -> Self {

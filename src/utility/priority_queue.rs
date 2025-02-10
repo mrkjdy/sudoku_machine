@@ -94,7 +94,7 @@ impl<P: Ord + Debug> PriorityQueue<P> {
     /// Try to move the item at the given heap index up the heap until it is in the correct
     /// position.
     fn heapify_up(&mut self, heap_index: usize) {
-        if heap_index <= 0 {
+        if heap_index == 0 {
             return;
         }
         let mut current_heap_index = heap_index;
@@ -173,7 +173,7 @@ impl<P: Ord + Debug> PriorityQueue<P> {
         let index = self.heap.pop().unwrap();
         let (_, priority) = self.map[index].take().unwrap();
         self.heapify_down(0);
-        return Some((index, priority));
+        Some((index, priority))
     }
 
     /// Insert an item into the priority queue
@@ -217,21 +217,6 @@ impl<P: Ord + Debug> PriorityQueue<P> {
         }
     }
 
-    /// Create a new PriorityQueue from an iterator of key-priority pairs
-    pub fn from_iter<I: Iterator<Item = (usize, P)>>(iter: I) -> Self {
-        let (lower, upper_opt) = iter.size_hint();
-        let capacity = if let Some(upper) = upper_opt {
-            upper
-        } else {
-            lower
-        };
-        let mut priority_queue = PriorityQueue::with_capacity(capacity);
-        // Have to use the checked fill_from_iter because the iterator may contain keys larger than
-        // the size hint.
-        priority_queue.fill_from_iter(iter);
-        priority_queue
-    }
-
     /// Create a new PriorityQueue from an iterator of key-priority pairs.
     /// This function is unsafe because it assumes that the iterator will not contain keys larger
     /// than the size hint from the iterator.
@@ -245,6 +230,30 @@ impl<P: Ord + Debug> PriorityQueue<P> {
         let mut priority_queue = PriorityQueue::with_capacity(capacity);
         priority_queue.init_map_none(capacity);
         priority_queue.fill_from_iter_unsafe(iter);
+        priority_queue
+    }
+}
+
+impl<P> FromIterator<(usize, P)> for PriorityQueue<P>
+where
+    P: Ord + Debug,
+{
+    /// Create a new PriorityQueue from an iterator of key-priority pairs
+    fn from_iter<I: IntoIterator<Item = (usize, P)>>(iter: I) -> Self
+    where
+        I::IntoIter: Iterator,
+    {
+        let iter = iter.into_iter();
+        let (lower, upper_opt) = iter.size_hint();
+        let capacity = if let Some(upper) = upper_opt {
+            upper
+        } else {
+            lower
+        };
+        let mut priority_queue = PriorityQueue::with_capacity(capacity);
+        // Have to use the checked fill_from_iter because the iterator may contain keys larger than
+        // the size hint.
+        priority_queue.fill_from_iter(iter);
         priority_queue
     }
 }

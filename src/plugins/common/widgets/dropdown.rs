@@ -199,7 +199,7 @@ impl Spawnable for DropdownWidget {
                 }
             });
         });
-        return ec;
+        ec
     }
 }
 
@@ -219,6 +219,7 @@ fn dropdown_button_text_system(
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn dropdown_button_icon_system(
     list_query: Query<(&Parent, &Visibility), (Changed<Visibility>, With<DropdownList>)>,
     container_query: Query<&Children, With<DropdownContainer>>,
@@ -249,7 +250,7 @@ fn dropdown_list_visibility_system(
     container_query: Query<&Children, With<DropdownContainer>>,
     mut list_query: Query<&mut Visibility, With<DropdownList>>,
 ) {
-    if buttons.get_just_pressed().len() <= 0 {
+    if buttons.get_just_pressed().len() == 0 {
         return;
     }
     for (&button_interaction, button_parent) in button_query.iter() {
@@ -310,6 +311,7 @@ fn dropdown_list_selection_system(
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn dropdown_list_position_system(
     button_query: Query<
         (&Parent, &Node),

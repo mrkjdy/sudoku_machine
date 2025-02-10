@@ -6,7 +6,7 @@
 #[derive(Copy, Clone, Debug, Default)]
 pub struct BitSet16(pub(super) u16);
 
-impl<'a, I> From<I> for BitSet16
+impl<I> From<I> for BitSet16
 where
     I: Iterator<Item = u8>,
 {
@@ -150,7 +150,7 @@ impl BitSet16 {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.len() <= 0
+        self.len() == 0
     }
 
     pub fn pop(&mut self) -> Option<u8> {
@@ -168,7 +168,7 @@ pub struct BitSet16Iter<'a> {
     bit: u8,
 }
 
-impl<'a> Iterator for BitSet16Iter<'a> {
+impl Iterator for BitSet16Iter<'_> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {

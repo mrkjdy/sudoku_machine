@@ -116,7 +116,7 @@ impl From<&str> for ClassicGrid {
         for (row, line) in s.lines().filter(|l| !l.starts_with("-")).enumerate() {
             for (col, c) in line
                 .chars()
-                .filter(|&c| c.is_digit(10) || c == '.')
+                .filter(|&c| c.is_ascii_digit() || c == '.')
                 .enumerate()
             {
                 if let Some(num) = c.to_digit(10) {

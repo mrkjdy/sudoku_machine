@@ -7,7 +7,7 @@ pub trait Spawn {
     fn spawn(&mut self, bundle: impl Bundle) -> EntityCommands<'_>;
 }
 
-impl<'a> Spawn for ChildBuilder<'a> {
+impl Spawn for ChildBuilder<'_> {
     fn spawn(&mut self, bundle: impl Bundle) -> EntityCommands<'_> {
         ChildBuild::spawn(self, bundle)
     }

@@ -15,7 +15,7 @@ impl Eq for ElementSet {}
 
 impl PartialOrd for ElementSet {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.0.len().partial_cmp(&self.0.len())
+        Some(other.cmp(self))
     }
 }
 
@@ -61,7 +61,7 @@ impl ElementSet {
     }
 }
 
-impl<'a, I> From<I> for ElementSet
+impl<I> From<I> for ElementSet
 where
     I: Iterator<Item = u8>,
 {

@@ -10,6 +10,7 @@ pub fn themed_node_plugin(app: &mut App) {
     app.add_systems(Update, themed_node_system);
 }
 
+#[allow(clippy::type_complexity)]
 fn themed_node_system(
     theme: Res<Theme>,
     mut background_color_query: Query<&mut BackgroundColor, (With<Themed>, Without<Text>)>,
