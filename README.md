@@ -37,4 +37,4 @@ License (OFL)**. For more information, see
 
 The icons located in `assets/icons/` are part of **Heroicons**, which are
 licensed under the **MIT License**. For more information, see
-[`assets/icons/LICENSE-Heroicons.txt`](assets/fonts/LICENSE-Heroicons.txt).
+[`assets/icons/LICENSE-Heroicons.txt`](assets/icons/LICENSE-Heroicons.txt).
