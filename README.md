@@ -25,7 +25,7 @@ game using WebAssembly/WebGPU and make it available at https://mrkjdy.dev.
 ### License Information
 
 All source code in this repository is licensed under the **MIT License**. See
-the [LICENSE](LICENSE) file for details.
+the [LICENSE.txt](LICENSE.txt) file for details.
 
 #### Fonts
 
