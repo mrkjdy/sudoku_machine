@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 arboard = "3.4.0"
 bevy = { version = "0.15", features = ["dynamic_linking"] }
-dark-light = "1.1.1"
+dark-light = "2.0.0"
 fastrand = "2.1.1"
 indoc = "2.0.5"
 num_enum = "0.7.3"
