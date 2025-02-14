@@ -1,9 +1,8 @@
 name: Release Binaries
 
 on:
-  push:
-    tags:
-      - "*"
+  release:
+    types: [published]
 
 env:
   binary: sudoku_machine
