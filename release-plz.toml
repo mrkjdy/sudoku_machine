@@ -1,3 +1,2 @@
 [workspace]
-publish = false
 release_always = false
