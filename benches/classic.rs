@@ -59,22 +59,22 @@ fn fill_from_myrng(bencher: Bencher) {
         });
 }
 
-#[bench(min_time=Duration::from_secs(600))]
-fn minimum_clues(bencher: Bencher) {
-    bencher
-        .with_inputs(|| {
-            let seed = rand::rng().random();
-            let mut rng = MyRng::with_seed(seed);
-            let mut puzzle = ClassicPuzzle::new();
-            puzzle.fill_from_rng(&mut rng);
-            (puzzle, rng)
-        })
-        .bench_values(|(mut puzzle, mut rng)| {
-            puzzle.remove_from_rng(&mut rng);
-            let num_clues = puzzle.num_clues();
-            if num_clues < 21 {
-                println!("Found puzzle with {} clues", num_clues);
-                println!("{}", puzzle.to_string());
-            }
-        });
-}
+// #[bench(min_time=Duration::from_secs(600))]
+// fn minimum_clues(bencher: Bencher) {
+//     bencher
+//         .with_inputs(|| {
+//             let seed = rand::rng().random();
+//             let mut rng = MyRng::with_seed(seed);
+//             let mut puzzle = ClassicPuzzle::new();
+//             puzzle.fill_from_rng(&mut rng);
+//             (puzzle, rng)
+//         })
+//         .bench_values(|(mut puzzle, mut rng)| {
+//             puzzle.remove_from_rng(&mut rng);
+//             let num_clues = puzzle.num_clues();
+//             if num_clues < 21 {
+//                 println!("Found puzzle with {} clues", num_clues);
+//                 println!("{}", puzzle.to_string());
+//             }
+//         });
+// }
