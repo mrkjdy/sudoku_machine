@@ -23,11 +23,6 @@ impl RngCore for MyRng {
     fn fill_bytes(&mut self, dest: &mut [u8]) {
         self.0.fill(dest)
     }
-
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
-        self.0.fill(dest);
-        Ok(())
-    }
 }
 
 impl MyRng {
@@ -40,7 +35,7 @@ impl MyRng {
 fn fill_from_siprng(bencher: Bencher) {
     bencher
         .with_inputs(|| {
-            let seed = rand::thread_rng().gen_seed();
+            let seed = rand::rng().gen_seed();
             let rng = SipHasher::from(seed).into_rng();
             let puzzle = ClassicPuzzle::new();
             (puzzle, rng)
@@ -54,7 +49,7 @@ fn fill_from_siprng(bencher: Bencher) {
 fn fill_from_myrng(bencher: Bencher) {
     bencher
         .with_inputs(|| {
-            let seed = rand::thread_rng().gen();
+            let seed = rand::rng().random();
             let rng = MyRng::with_seed(seed);
             let puzzle = ClassicPuzzle::new();
             (puzzle, rng)
@@ -68,7 +63,7 @@ fn fill_from_myrng(bencher: Bencher) {
 fn minimum_clues(bencher: Bencher) {
     bencher
         .with_inputs(|| {
-            let seed = rand::thread_rng().gen();
+            let seed = rand::rng().random();
             let mut rng = MyRng::with_seed(seed);
             let mut puzzle = ClassicPuzzle::new();
             puzzle.fill_from_rng(&mut rng);
