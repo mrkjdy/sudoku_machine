@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 description = "A Sudoku game built with Bevy"
 license = "MIT"
+authors = ["Mark Judy"]
+repository = "https://github.com/mrkjdy/sudoku_machine"
 
 [dependencies]
 arboard = "3.4.0"
