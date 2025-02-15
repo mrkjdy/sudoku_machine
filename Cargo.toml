@@ -21,6 +21,9 @@ strum_macros = "0.27.0"
 divan = "0.1.14"
 indoc = "2.0.5"
 
+[patch.crates-io]
+ashpd = { version = "0.6", features = ["io"] }
+
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
 opt-level = 1
