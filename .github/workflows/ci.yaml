@@ -97,8 +97,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Install Dependencies
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
+      - name: Compile
+        run: cargo bench --no-run
       - name: Run bench
-        run: cargo -q bench | tee bench.txt
+        run: cargo bench --quiet | tee bench.txt
       - name: Comment on PR
         uses: mshick/add-pr-comment@v2
         with:
