@@ -105,9 +105,10 @@ jobs:
         uses: mshick/add-pr-comment@v2
         with:
           message-id: benchmark-results
+          message-path: bench.txt
           message: |
             ## 🏎️ Benchmark Results
             ```
-            $(cat bench.txt)
+            << FILE_CONTENTS >>
             ```
           repo-token: ${{ secrets.GITHUB_TOKEN }}
