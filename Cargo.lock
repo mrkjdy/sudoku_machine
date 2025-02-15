@@ -2404,8 +2404,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9fa08315bb612088cc391249efdc3bc77536f16c91f6cf495e6fbe85b20a4a81"
 dependencies = [
  "futures-core",
+ "futures-io",
  "futures-macro",
  "futures-task",
+ "memchr",
  "pin-project-lite",
  "pin-utils",
  "slab",
@@ -4353,6 +4355,7 @@ dependencies = [
  "dark-light",
  "divan",
  "fastrand",
+ "futures-util",
  "indoc",
  "num_enum",
  "rand 0.9.0",

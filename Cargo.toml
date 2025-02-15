@@ -10,6 +10,7 @@ arboard = "3.4.0"
 bevy = { version = "0.15", features = ["dynamic_linking"] }
 dark-light = "2.0"
 fastrand = "2.1.1"
+futures-util = { version = "0.3.31", features = ["io"] }
 indoc = "2.0.5"
 num_enum = "0.7.3"
 rand = "0.9"
