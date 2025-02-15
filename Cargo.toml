@@ -8,12 +8,12 @@ license = "MIT"
 [dependencies]
 arboard = "3.4.0"
 bevy = { version = "0.15", features = ["dynamic_linking"] }
-dark-light = "1.1.1"
+dark-light = "2.0"
 fastrand = "2.1.1"
 indoc = "2.0.5"
 num_enum = "0.7.3"
-rand = "0.8.5"
-rand_seeder = "0.3.0"
+rand = "0.9"
+rand_seeder = "0.4"
 strum = "0.27.0"
 strum_macros = "0.27.0"
 

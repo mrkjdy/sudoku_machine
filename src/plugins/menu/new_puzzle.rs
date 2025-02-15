@@ -222,7 +222,7 @@ fn start_button_system(
         puzzle_settings.puzzle_type = PuzzleType::try_from(dropdown_data.selected).unwrap();
         puzzle_settings.seed = if text_input_data.is_empty {
             // Generate a random seed string if one was not provided
-            rand::thread_rng().gen_seed()
+            rand::rng().gen_seed()
         } else {
             // Otherwise use the provided value
             seed_text.0.clone()

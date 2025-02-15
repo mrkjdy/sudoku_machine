@@ -88,9 +88,9 @@ fn theme_init_system(mut commands: Commands, asset_server: Res<AssetServer>) {
     let text_font_bold = asset_server.load("fonts/OpenSans-Bold.ttf");
 
     // Use system theme to set initial app theme
-    let app_theme: Theme = match dark_light::detect() {
+    let app_theme: Theme = match dark_light::detect().unwrap_or(dark_light::Mode::Unspecified) {
         dark_light::Mode::Dark => Theme::dark(text_font_regular, text_font_bold),
-        dark_light::Mode::Default => Theme::light(text_font_regular, text_font_bold),
+        dark_light::Mode::Unspecified => Theme::light(text_font_regular, text_font_bold),
         dark_light::Mode::Light => Theme::light(text_font_regular, text_font_bold),
     };
 
