@@ -100,15 +100,14 @@ jobs:
       - name: Compile
         run: cargo bench --no-run
       - name: Run bench
-        run: cargo bench --quiet | tee bench.txt
+        run: |
+          echo "## 🏎️ Bench Results" > bench.md
+          echo '```' >> bench.md
+          cargo bench --quiet | tee -a bench.md
+          echo '```' >> bench.md
       - name: Comment on PR
         uses: mshick/add-pr-comment@v2
         with:
           message-id: benchmark-results
-          message-path: bench.txt
-          message: |
-            ## 🏎️ Benchmark Results
-            ```
-            << FILE_CONTENTS >>
-            ```
+          message-path: bench.md
           repo-token: ${{ secrets.GITHUB_TOKEN }}
