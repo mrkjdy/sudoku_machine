@@ -4359,6 +4359,7 @@ dependencies = [
  "rand_seeder",
  "strum",
  "strum_macros",
+ "uuid",
 ]
 
 [[package]]
