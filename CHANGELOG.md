@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1](https://github.com/mrkjdy/sudoku_machine/compare/v0.1.0...v0.1.1) - 2025-02-15
+
+### Other
+
+- update test data after upgrading rand crates
+- update dependencies
+
 ## [0.1.0](https://github.com/mrkjdy/sudoku_machine/releases/tag/v0.1.0) - 2025-02-14
 
 ### Added
