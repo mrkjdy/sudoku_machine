@@ -477,31 +477,31 @@ mod tests {
     const SEED: &str = "test";
 
     const FILLED_PUZZLE_STR: &str = indoc! {"
-        6 5 4 | 7 8 1 | 2 3 9
-        9 1 8 | 3 4 2 | 5 6 7
-        7 3 2 | 6 5 9 | 1 4 8
+        9 2 6 | 8 3 4 | 5 7 1
+        4 8 5 | 7 1 9 | 3 2 6
+        1 3 7 | 5 6 2 | 8 4 9
         ------|-------|------
-        8 4 6 | 2 7 3 | 9 1 5
-        1 7 3 | 5 9 8 | 6 2 4
-        5 2 9 | 1 6 4 | 7 8 3
+        2 6 9 | 1 4 8 | 7 3 5
+        5 7 1 | 6 2 3 | 4 9 8
+        3 4 8 | 9 7 5 | 1 6 2
         ------|-------|------
-        4 8 1 | 9 2 7 | 3 5 6
-        3 6 7 | 4 1 5 | 8 9 2
-        2 9 5 | 8 3 6 | 4 7 1
+        7 9 4 | 2 8 1 | 6 5 3
+        8 5 3 | 4 9 6 | 2 1 7
+        6 1 2 | 3 5 7 | 9 8 4
     "};
 
     const MINIMUM_PUZZLE_STR: &str = indoc! {"
-        . 5 . | . . 1 | . . 9
-        . . 8 | . . . | 5 . .
-        7 . . | . 5 . | 1 . 8
+        . 2 . | . . . | . 7 1
+        . . . | . . 9 | . . 6
+        1 . . | 5 6 . | 8 . .
         ------|-------|------
-        . 4 . | 2 . . | . . .
-        1 . 3 | . . . | . 2 .
-        . . 9 | . . . | 7 . 3
+        . . 9 | 1 . . | . . .
+        . . . | . . 3 | 4 . .
+        . . . | . 7 . | . 6 .
         ------|-------|------
-        . . . | . . 7 | . 5 .
-        3 . 7 | . 1 . | . . .
-        . . . | 8 . . | 4 . .
+        7 . . | . 8 . | . . 3
+        8 5 3 | . . . | 2 . .
+        . . . | . . . | . . 4
     "};
 
     #[test]
@@ -572,9 +572,9 @@ mod tests {
     fn from_grid_minimum() {
         let grid = ClassicGrid::from(MINIMUM_PUZZLE_STR);
         let puzzle = ClassicPuzzle::from(grid);
-        let expected_row_set_lens = [6, 7, 5, 7, 6, 6, 7, 6, 7];
-        let expected_col_set_lens = [6, 7, 5, 7, 7, 7, 5, 7, 6];
-        let expected_box_set_lens = [6, 7, 5, 5, 8, 6, 7, 6, 7];
+        let expected_row_set_lens = [6, 7, 5, 7, 7, 7, 6, 5, 8];
+        let expected_col_set_lens = [6, 7, 7, 7, 6, 7, 6, 7, 5];
+        let expected_box_set_lens = [7, 6, 5, 8, 6, 7, 5, 8, 6];
         let check_sizes = |sets: &[ElementSet], expected_lens: &[u8], set_type: &str| {
             sets.iter().enumerate().for_each(|(i, set)| {
                 let actual_len = set.len();
@@ -590,7 +590,7 @@ mod tests {
         check_sizes(&puzzle.row_sets, &expected_row_set_lens, "row");
         check_sizes(&puzzle.col_sets, &expected_col_set_lens, "col");
         check_sizes(&puzzle.box_sets, &expected_box_set_lens, "box");
-        assert_eq!(puzzle.empty_cell_queue.len(), 57);
+        assert_eq!(puzzle.empty_cell_queue.len(), 58);
     }
 
     #[test]
