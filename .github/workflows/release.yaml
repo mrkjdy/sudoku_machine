@@ -56,7 +56,7 @@ jobs:
   release-wasm:
     runs-on: ubuntu-latest
     needs: [release-plz-release]
-    if: needs.release-plz-release.outputs.releases_created == 'true'
+    if: needs.release-plz-release.outputs.releases_created
     strategy:
       matrix:
         release: ${{ needs.release-plz-release.outputs.releases }}
@@ -101,7 +101,7 @@ jobs:
   release-linux:
     runs-on: ubuntu-latest
     needs: [release-plz-release]
-    if: needs.release-plz-release.outputs.releases_created == 'true'
+    if: needs.release-plz-release.outputs.releases_created
     strategy:
       matrix:
         release: ${{ needs.release-plz-release.outputs.releases }}
@@ -147,7 +147,7 @@ jobs:
   release-windows:
     runs-on: windows-latest
     needs: [release-plz-release]
-    if: needs.release-plz-release.outputs.releases_created == 'true'
+    if: needs.release-plz-release.outputs.releases_created
     strategy:
       matrix:
         release: ${{ needs.release-plz-release.outputs.releases }}
@@ -190,7 +190,7 @@ jobs:
   release-macOS-intel:
     runs-on: macOS-latest
     needs: [release-plz-release]
-    if: needs.release-plz-release.outputs.releases_created == 'true'
+    if: needs.release-plz-release.outputs.releases_created
     strategy:
       matrix:
         release: ${{ needs.release-plz-release.outputs.releases }}
@@ -233,7 +233,7 @@ jobs:
   release-macOS-apple-silicon:
     runs-on: macOS-latest
     needs: [release-plz-release]
-    if: needs.release-plz-release.outputs.releases_created == 'true'
+    if: needs.release-plz-release.outputs.releases_created
     strategy:
       matrix:
         release: ${{ needs.release-plz-release.outputs.releases }}
