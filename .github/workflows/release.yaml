@@ -90,7 +90,7 @@ jobs:
           zip --recurse-paths ../${{ matrix.release.package_name }}.zip .
 
       - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: ${{ matrix.release.package_name }}.zip
           name: wasm
@@ -136,7 +136,7 @@ jobs:
           zip --recurse-paths ../${{ matrix.release.package_name }}.zip .
 
       - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: ${{ matrix.release.package_name }}.zip
           name: linux
@@ -179,7 +179,7 @@ jobs:
           Compress-Archive -Path windows/* -DestinationPath ${{ matrix.release.package_name }}.zip
 
       - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: ${{ matrix.release.package_name }}.zip
           name: windows
@@ -222,7 +222,7 @@ jobs:
           hdiutil create -fs HFS+ -volname "${{ matrix.release.package_name }}" -srcfolder ${{ matrix.release.package_name }}.app ${{ matrix.release.package_name }}-macOS-intel.dmg
 
       - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: ${{ matrix.release.package_name }}-macOS-intel.dmg
           name: macOS-intel
@@ -265,7 +265,7 @@ jobs:
           hdiutil create -fs HFS+ -volname "${{ matrix.release.package_name }}-macOS-apple-silicon" -srcfolder ${{ matrix.release.package_name }}.app ${{ matrix.release.package_name }}-macOS-apple-silicon.dmg
 
       - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: ${{ matrix.release.package_name }}-macOS-apple-silicon.dmg
           name: macOS-apple-silicon
