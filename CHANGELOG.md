@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.1.3](https://github.com/mrkjdy/sudoku_machine/compare/v0.1.2...v0.1.3) - 2025-02-17
+
+### Other
+
+- use PAT instead of default GITHUB_TOKEN to trigger other workflows (#29)
+- print release-plz release output (#27)
+
 ## [0.1.2](https://github.com/mrkjdy/sudoku_machine/compare/v0.1.1...v0.1.2) - 2025-02-16
 
 ### Other
