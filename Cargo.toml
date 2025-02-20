@@ -15,8 +15,8 @@ indoc = "2.0.5"
 num_enum = "0.7.3"
 rand = "0.9"
 rand_seeder = "0.4"
-strum = "0.27.0"
-strum_macros = "0.27.0"
+strum = "0.27.1"
+strum_macros = "0.27.1"
 
 [dev-dependencies]
 divan = "0.1.14"
