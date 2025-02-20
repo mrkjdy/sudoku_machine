@@ -1,25 +1,17 @@
-use arboard::Clipboard;
 use bevy::input::keyboard::Key;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::input::ButtonState;
 use bevy::prelude::*;
 
+use crate::plugins::common::clipboard::clipboard_plugin;
+use crate::plugins::common::clipboard::ClipboardResource;
 use crate::plugins::common::theme::focus::FocusedEntity;
 use crate::plugins::common::theme::Themed;
 
 use super::Spawnable;
 
-#[derive(Resource)]
-struct ClipboardResource(Clipboard);
-
-impl Default for ClipboardResource {
-    fn default() -> Self {
-        Self(Clipboard::new().unwrap())
-    }
-}
-
 pub fn text_input_plugin(app: &mut App) {
-    app.init_resource::<ClipboardResource>()
+    app.add_plugins(clipboard_plugin)
         .insert_resource(BlinkTimer(Timer::from_seconds(0.5, TimerMode::Repeating)))
         .add_systems(
             Update,
@@ -176,25 +168,8 @@ fn text_input_cursor_blink_system(
     }
 }
 
-impl ClipboardResource {
-    fn copy(&mut self, val: impl Into<String>) {
-        self.0.set_text(val.into()).unwrap();
-    }
-
-    fn paste(&mut self, destination: &mut String) {
-        destination.push_str(
-            &self
-                .0
-                .get_text()
-                .unwrap()
-                .chars()
-                .filter(|&c| c != '\n' && c != '\r')
-                .collect::<String>(),
-        );
-    }
-}
-
 fn typing_system(
+    #[cfg(target_family = "wasm")] mut commands: Commands,
     focused_entity: Res<FocusedEntity>,
     mut container_query: Query<(&mut TextInputContainer, &Children), With<TextInputContainer>>,
     mut text_query: Query<&mut Text, With<TextInputText>>,
@@ -216,7 +191,8 @@ fn typing_system(
     let (mut text_input_data, container_children) = container_result.unwrap();
 
     // Get the text input val
-    let mut text = text_query.get_mut(container_children[0]).unwrap();
+    let text_entity = container_children[0];
+    let mut text = text_query.get_mut(text_entity).unwrap();
     let text_input_value = &mut text.0;
 
     // Handle the keyboard event
@@ -226,18 +202,24 @@ fn typing_system(
             continue;
         }
 
-        #[cfg(target_os = "macos")]
-        let control_keys = [KeyCode::SuperLeft, KeyCode::SuperRight];
-        #[cfg(not(target_os = "macos"))]
-        let control_keys = [KeyCode::ControlLeft, KeyCode::ControlRight];
+        let control_keys = [
+            KeyCode::SuperLeft,
+            KeyCode::SuperRight,
+            KeyCode::ControlLeft,
+            KeyCode::ControlRight,
+        ];
+
+        let mut is_empty = false;
 
         // Handle the key press
         match &keyboard_input_event.logical_key {
             Key::Backspace if keys.any_pressed(control_keys) => {
                 text_input_value.clear();
+                is_empty = text_input_value.is_empty();
             }
             Key::Backspace => {
                 text_input_value.pop();
+                is_empty = text_input_value.is_empty();
             }
             Key::Character(input) if keys.any_pressed(control_keys) => {
                 match input.as_str() {
@@ -245,7 +227,10 @@ fn typing_system(
                         clipboard_resource.copy(text_input_value.clone());
                     }
                     "v" => {
-                        clipboard_resource.paste(text_input_value);
+                        #[cfg(not(target_family = "wasm"))]
+                        clipboard_resource.native_paste(text_input_value);
+                        #[cfg(target_family = "wasm")]
+                        clipboard_resource.wasm_paste(&mut commands, text_entity);
                     }
                     _ => {}
                 };
@@ -260,12 +245,15 @@ fn typing_system(
                 clipboard_resource.copy(text_input_value.clone());
             }
             Key::Paste => {
-                clipboard_resource.paste(text_input_value);
+                #[cfg(not(target_family = "wasm"))]
+                clipboard_resource.native_paste(text_input_value);
+                #[cfg(target_family = "wasm")]
+                clipboard_resource.wasm_paste(&mut commands, text_entity);
             }
             _ => {}
         };
 
         // Finally, update the is_empty flag for the text input
-        text_input_data.is_empty = text_input_value.is_empty();
+        text_input_data.is_empty = is_empty;
     }
 }
