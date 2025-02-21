@@ -12,7 +12,6 @@ env:
 jobs:
   build-wasm:
     name: Build Wasm
-    if: ${{ github.event_name == 'release' || startsWith(github.head_ref, 'release-plz') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +60,6 @@ jobs:
 
   build-linux:
     name: Build Linux
-    if: ${{ github.event_name == 'release' || startsWith(github.head_ref, 'release-plz') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -110,7 +108,6 @@ jobs:
 
   build-windows:
     name: Build Windows
-    if: ${{ github.event_name == 'release' || startsWith(github.head_ref, 'release-plz') }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -153,17 +150,12 @@ jobs:
 
   build-macOS-intel:
     name: Build macOS - Intel
-    if: ${{ github.event_name == 'release' || startsWith(github.head_ref, 'release-plz') }}
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-apple-darwin
-      - name: Environment Setup
-        run: |
-          export CFLAGS="-fno-stack-check"
-          export MACOSX_DEPLOYMENT_TARGET="10.9"
 
       - name: Build
         run: |
@@ -176,6 +168,7 @@ jobs:
             target/x86_64-apple-darwin/release/${{ env.package_name }} \
             ${{ env.package_name }}.app/Contents/MacOS/
           cp -r assets ${{ env.package_name }}.app/Contents/MacOS/
+          sleep 5
           hdiutil create \
             -fs HFS+ \
             -volname "${{ env.package_name }}" \
@@ -202,17 +195,12 @@ jobs:
 
   build-macOS-apple-silicon:
     name: Build macOS - Apple Silicon
-    if: ${{ github.event_name == 'release' || startsWith(github.head_ref, 'release-plz') }}
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin
-      - name: Environment
-        # macOS 11 was the first version to support ARM
-        run: |
-          export MACOSX_DEPLOYMENT_TARGET="15"
 
       - name: Build
         run: |
