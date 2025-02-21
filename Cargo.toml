@@ -8,22 +8,30 @@ authors = ["Mark Judy"]
 repository = "https://github.com/mrkjdy/sudoku_machine"
 
 [dependencies]
-arboard = "3.4.0"
 bevy = { version = "0.15" }
 dark-light = "2.0"
 fastrand = "2.1.1"
-# Needed in CI for some reason
-futures-util = { version = "0.3.31", features = ["io"] }
 indoc = "2.0.5"
 num_enum = "0.7.3"
 rand = "0.9"
 rand_seeder = "0.4"
 strum = "0.27.1"
-strum_macros = "0.27.0"
+strum_macros = "0.27.1"
 
 [dev-dependencies]
 divan = "0.1.14"
-indoc = "2.0.5"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+futures-util = { version = "0.3.31", features = ["io"] }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+arboard = "3.4.0"
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+getrandom = { version = "0.3", features = ["wasm_js"] }
+web-sys = { version = "0.3", features = ["Clipboard", "Navigator", "Window"] }
+wasm-bindgen-futures = "0.4"
+bevy_defer = "0.13.3"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
@@ -51,6 +59,7 @@ inherits = "release"
 opt-level = "s"
 # Strip all debugging information from the binary to slightly reduce file size.
 strip = "debuginfo"
+
 
 [[bench]]
 name = "classic"
