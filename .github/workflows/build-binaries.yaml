@@ -7,14 +7,12 @@ on:
     types: [published]
 
 env:
-  should_run: ${{ github.event_name == 'release' || startsWith(github.head_ref, 'release-plz') }}
-  is_release: ${{ github.event_name == 'release' }}
   package_name: sudoku_machine
 
 jobs:
   build-wasm:
     name: Build Wasm
-    if: ${{ env.should_run }}
+    if: ${{ github.event_name == 'release' || startsWith(github.head_ref, 'release-plz') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +42,7 @@ jobs:
           zip --recurse-paths ../${{ env.package_name }}.zip .
 
       - name: Upload binaries to artifacts
-        if: ${{ env.is_release }}
+        if: ${{ github.event_name == 'release' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.package_name }}.zip
@@ -52,7 +50,7 @@ jobs:
           retention-days: 1
 
       - name: Upload binaries to release
-        if: ${{ env.is_release }}
+        if: ${{ github.event_name == 'release' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -63,7 +61,7 @@ jobs:
 
   build-linux:
     name: Build Linux
-    if: ${{ env.should_run }}
+    if: ${{ github.event_name == 'release' || startsWith(github.head_ref, 'release-plz') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -93,7 +91,7 @@ jobs:
           zip --recurse-paths ../${{ env.package_name }}.zip .
 
       - name: Upload binaries to artifacts
-        if: ${{ env.is_release }}
+        if: ${{ github.event_name == 'release' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.package_name }}.zip
@@ -101,7 +99,7 @@ jobs:
           retention-days: 1
 
       - name: Upload binaries to release
-        if: ${{ env.is_release }}
+        if: ${{ github.event_name == 'release' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -112,7 +110,7 @@ jobs:
 
   build-windows:
     name: Build Windows
-    if: ${{ env.should_run }}
+    if: ${{ github.event_name == 'release' || startsWith(github.head_ref, 'release-plz') }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -136,7 +134,7 @@ jobs:
           Compress-Archive -Path windows/* -DestinationPath ${{ env.package_name }}.zip
 
       - name: Upload binaries to artifacts
-        if: ${{ env.is_release }}
+        if: ${{ github.event_name == 'release' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.package_name }}.zip
@@ -144,7 +142,7 @@ jobs:
           retention-days: 1
 
       - name: Upload binaries to release
-        if: ${{ env.is_release }}
+        if: ${{ github.event_name == 'release' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -155,7 +153,7 @@ jobs:
 
   build-macOS-intel:
     name: Build macOS - Intel
-    if: ${{ env.should_run }}
+    if: ${{ github.event_name == 'release' || startsWith(github.head_ref, 'release-plz') }}
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v4
@@ -185,7 +183,7 @@ jobs:
             ${{ env.package_name }}-macOS-intel.dmg
 
       - name: Upload binaries to artifacts
-        if: ${{ env.is_release }}
+        if: ${{ github.event_name == 'release' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.package_name }}-macOS-intel.dmg
@@ -193,7 +191,7 @@ jobs:
           retention-days: 1
 
       - name: Upload binaries to release
-        if: ${{ env.is_release }}
+        if: ${{ github.event_name == 'release' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -204,7 +202,7 @@ jobs:
 
   build-macOS-apple-silicon:
     name: Build macOS - Apple Silicon
-    if: ${{ env.should_run }}
+    if: ${{ github.event_name == 'release' || startsWith(github.head_ref, 'release-plz') }}
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v4
@@ -234,7 +232,7 @@ jobs:
             ${{ env.package_name }}-macOS-apple-silicon.dmg
 
       - name: Upload binaries to artifacts
-        if: ${{ env.is_release }}
+        if: ${{ github.event_name == 'release' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.package_name }}-macOS-apple-silicon.dmg
@@ -242,7 +240,7 @@ jobs:
           retention-days: 1
 
       - name: Upload binaries to release
-        if: ${{ env.is_release }}
+        if: ${{ github.event_name == 'release' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
