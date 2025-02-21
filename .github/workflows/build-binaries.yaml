@@ -168,6 +168,7 @@ jobs:
             target/x86_64-apple-darwin/release/${{ env.package_name }} \
             ${{ env.package_name }}.app/Contents/MacOS/
           cp -r assets ${{ env.package_name }}.app/Contents/MacOS/
+          sleep 5
           hdiutil create \
             -fs HFS+ \
             -volname "${{ env.package_name }}" \
