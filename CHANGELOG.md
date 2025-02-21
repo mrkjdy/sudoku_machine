@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.1.7](https://github.com/mrkjdy/sudoku_machine/compare/v0.1.6...v0.1.7) - 2025-02-21
+
+### Fixed
+
+- wasm building and clipboard (#40)
+
+### Other
+
+- build binaries on all PRs and remove macOS env vars (#42)
+- build binaries on release PRs (#41)
+- *(deps)* bump strum_macros from 0.27.0 to 0.27.1 (#38)
+- *(deps)* bump strum from 0.27.0 to 0.27.1 (#37)
+
 ## [0.1.6](https://github.com/mrkjdy/sudoku_machine/compare/v0.1.5...v0.1.6) - 2025-02-17
 
 ### Other
