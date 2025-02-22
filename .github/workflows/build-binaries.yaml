@@ -198,6 +198,10 @@ jobs:
         with:
           targets: aarch64-apple-darwin
 
+      - name: Build
+        run: |
+          cargo build --release --target aarch64-apple-darwin
+
       - name: Install the Apple certificate and provisioning profile
         env:
           MACOS_BUILD_CERTIFICATE_BASE64: ${{ secrets.MACOS_BUILD_CERTIFICATE_BASE64 }}
@@ -228,10 +232,6 @@ jobs:
           # mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           # cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
 
-      - name: Build
-        run: |
-          cargo build --release --target aarch64-apple-darwin
-
       - name: Prepare Package
         run: |
           # Create .app
@@ -242,7 +242,7 @@ jobs:
           cp -r assets ${{ env.package_name }}.app/Contents/MacOS/
 
           # Sign .app
-          codesign --force --deep --sign mrkjdy-sudoku_machine ${{ env.package_name.app }}
+          codesign --force --deep --sign mrkjdy-sudoku_machine ${{ env.package_name }}.app
 
           # Create .dmg
           hdiutil create \
