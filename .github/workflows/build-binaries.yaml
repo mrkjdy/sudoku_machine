@@ -41,7 +41,6 @@ jobs:
           zip --recurse-paths ../${{ env.package_name }}.zip .
 
       - name: Upload binaries to artifacts
-        if: ${{ github.event_name == 'release' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.package_name }}.zip
@@ -89,7 +88,6 @@ jobs:
           zip --recurse-paths ../${{ env.package_name }}.zip .
 
       - name: Upload binaries to artifacts
-        if: ${{ github.event_name == 'release' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.package_name }}.zip
@@ -131,7 +129,6 @@ jobs:
           Compress-Archive -Path windows/* -DestinationPath ${{ env.package_name }}.zip
 
       - name: Upload binaries to artifacts
-        if: ${{ github.event_name == 'release' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.package_name }}.zip
@@ -176,7 +173,6 @@ jobs:
             ${{ env.package_name }}-macOS-intel.dmg
 
       - name: Upload binaries to artifacts
-        if: ${{ github.event_name == 'release' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.package_name }}-macOS-intel.dmg
@@ -220,7 +216,6 @@ jobs:
             ${{ env.package_name }}-macOS-apple-silicon.dmg
 
       - name: Upload binaries to artifacts
-        if: ${{ github.event_name == 'release' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.package_name }}-macOS-apple-silicon.dmg
