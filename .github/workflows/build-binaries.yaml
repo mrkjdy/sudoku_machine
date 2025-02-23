@@ -9,6 +9,7 @@ on:
 env:
   app_name: Sudoku Machine
   package_name: sudoku_machine
+  macos_signing_identity: mrkjdy-sudoku_machine
 
 jobs:
   build-wasm:
@@ -235,6 +236,9 @@ jobs:
 
           EOF
 
+          # Sign .app
+          codesign --force --deep --sign ${{ env.macos_signing_identity }} ${{ env.package_name }}.app
+
           # Create a fancy DMG
           brew install create-dmg
           create-dmg \
@@ -245,7 +249,7 @@ jobs:
             --icon "${{ env.app_name }}.app" 128 64 \
             --hide-extension "${{ env.app_name }}.app" \
             --app-drop-link 384 64 \
-            --codesign mrkjdy-sudoku_machine \
+            --codesign ${{ env.macos_signing_identity }} \
             "${{ env.package_name }}-macOS-${{ matrix.platform.dmg_name }}.dmg" \
             "${{ env.app_name }}.app"
 
