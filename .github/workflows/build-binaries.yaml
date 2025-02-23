@@ -237,7 +237,7 @@ jobs:
           EOF
 
           # Sign .app
-          codesign --force --deep --sign ${{ env.macos_signing_identity }} ${{ env.package_name }}.app
+          codesign --force --deep --sign ${{ env.macos_signing_identity }} "${{ env.app_name }}.app"
 
           # Create a fancy DMG
           brew install create-dmg
