@@ -203,7 +203,7 @@ jobs:
           # Create Info.plist
           MIN_SYSTEM_VERSION_PRINTOUT="$(rustc --print=deployment-target --target ${{ matrix.platform.target }})"
           MIN_SYSTEM_VERSION="$(echo $MIN_SYSTEM_VERSION_PRINTOUT | cut -d'=' -f2)"
-          cat > ${{ env.app_name}}/Contents/Info.plist <<EOF
+          cat > "${{ env.app_name }}.app/Contents/Info.plist" <<- EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
