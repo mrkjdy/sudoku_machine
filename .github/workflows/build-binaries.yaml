@@ -7,6 +7,7 @@ on:
     types: [published]
 
 env:
+  app_name: Sudoku Machine
   package_name: sudoku_machine
 
 jobs:
@@ -158,18 +159,45 @@ jobs:
         run: |
           cargo build --release --target x86_64-apple-darwin
 
+      # From https://docs.github.com/en/actions/use-cases-and-examples/deploying/installing-an-apple-certificate-on-macos-runners-for-xcode-development#add-a-step-to-your-workflow
+      - name: Install macOS Code Signing certificate
+        env:
+          MACOS_BUILD_CERTIFICATE_BASE64: ${{ secrets.MACOS_BUILD_CERTIFICATE_BASE64 }}
+          MACOS_P12_PASSWORD: ${{ secrets.MACOS_P12_PASSWORD }}
+          MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          # create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # import certificate from secrets
+          echo -n "$MACOS_BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+
+          # create temporary keychain
+          security create-keychain -p "$MACOS_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$MACOS_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # import certificate to keychain
+          security import $CERTIFICATE_PATH -P "$MACOS_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$MACOS_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
       - name: Prepare Package
         run: |
-          mkdir -p ${{ env.package_name }}.app/Contents/MacOS
-          cp \
-            target/x86_64-apple-darwin/release/${{ env.package_name }} \
-            ${{ env.package_name }}.app/Contents/MacOS/
-          cp -r assets ${{ env.package_name }}.app/Contents/MacOS/
-          sleep 5
+          # Create .app
+          mkdir -p "${{ env.app_name }}.app/Contents/MacOS"
+          cp target/x86_64-apple-darwin/release/${{ env.package_name }} \
+            "${{ env.app_name }}.app/Contents/MacOS/"
+          cp -r assets "${{ env.app_name }}.app/Contents/MacOS/"
+
+          # Sign .app
+          codesign --force --deep --sign mrkjdy-sudoku_machine "${{ env.app_name }}.app"
+
           hdiutil create \
             -fs HFS+ \
             -volname "${{ env.package_name }}" \
-            -srcfolder ${{ env.package_name }}.app \
+            -srcfolder "${{ env.app_name }}.app" \
             ${{ env.package_name }}-macOS-intel.dmg
 
       - name: Upload binaries to artifacts
@@ -202,21 +230,19 @@ jobs:
         run: |
           cargo build --release --target aarch64-apple-darwin
 
-      - name: Install the Apple certificate and provisioning profile
+      # From https://docs.github.com/en/actions/use-cases-and-examples/deploying/installing-an-apple-certificate-on-macos-runners-for-xcode-development#add-a-step-to-your-workflow
+      - name: Install macOS Code Signing certificate
         env:
           MACOS_BUILD_CERTIFICATE_BASE64: ${{ secrets.MACOS_BUILD_CERTIFICATE_BASE64 }}
           MACOS_P12_PASSWORD: ${{ secrets.MACOS_P12_PASSWORD }}
-          # BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
           MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
         run: |
           # create variables
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          # PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # import certificate and provisioning profile from secrets
+          # import certificate from secrets
           echo -n "$MACOS_BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          # echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
 
           # create temporary keychain
           security create-keychain -p "$MACOS_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
@@ -228,27 +254,22 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "$MACOS_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
 
-          # apply provisioning profile
-          # mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          # cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
-
       - name: Prepare Package
         run: |
           # Create .app
-          mkdir -p ${{ env.package_name }}.app/Contents/MacOS
-          cp \
-            target/aarch64-apple-darwin/release/${{ env.package_name }} \
-            ${{ env.package_name }}.app/Contents/MacOS/
-          cp -r assets ${{ env.package_name }}.app/Contents/MacOS/
+          mkdir -p "${{ env.app_name }}.app/Contents/MacOS"
+          cp target/aarch64-apple-darwin/release/${{ env.package_name }} \
+            "${{ env.app_name }}.app/Contents/MacOS/"
+          cp -r assets "${{ env.app_name }}.app/Contents/MacOS/"
 
           # Sign .app
-          codesign --force --deep --sign mrkjdy-sudoku_machine ${{ env.package_name }}.app
+          codesign --force --deep --sign mrkjdy-sudoku_machine "${{ env.app_name }}.app"
 
           # Create .dmg
           hdiutil create \
             -fs HFS+ \
             -volname "${{ env.package_name }}-macOS-apple-silicon" \
-            -srcfolder ${{ env.package_name }}.app \
+            -srcfolder "${{ env.app_name }}.app" \
             ${{ env.package_name }}-macOS-apple-silicon.dmg
 
       - name: Upload binaries to artifacts
