@@ -146,18 +146,23 @@ jobs:
           overwrite: true
           tag: ${{ github.ref_name }}
 
-  build-macOS-intel:
-    name: Build macOS - Intel
+  build-macos:
+    name: Build macOS - ${{ matrix.job-platform }}
+    strategy:
+      matrix:
+        job-platform: [Apple Silicon, Intel]
+        dmg-platform: [apple-silicon, intel]
+        target: [aarch64-apple-darwin, x86_64-apple-darwin]
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-apple-darwin
+          targets: ${{ matrix.target }}
 
       - name: Build
         run: |
-          cargo build --release --target x86_64-apple-darwin
+          cargo build --release --target ${{ matrix.target }}
 
       # From https://docs.github.com/en/actions/use-cases-and-examples/deploying/installing-an-apple-certificate-on-macos-runners-for-xcode-development#add-a-step-to-your-workflow
       - name: Install macOS Code Signing certificate
@@ -187,24 +192,65 @@ jobs:
         run: |
           # Create .app
           mkdir -p "${{ env.app_name }}.app/Contents/MacOS"
-          cp target/x86_64-apple-darwin/release/${{ env.package_name }} \
+          cp target/${{ matrix.target }}/release/${{ env.package_name }} \
             "${{ env.app_name }}.app/Contents/MacOS/"
           cp -r assets "${{ env.app_name }}.app/Contents/MacOS/"
 
-          # Sign .app
-          codesign --force --deep --sign mrkjdy-sudoku_machine "${{ env.app_name }}.app"
+          # Create Info.plist
+          MIN_SYSTEM_VERSION_PRINTOUT="$(rustc --print=deployment-target --target ${{ matrix.target }})"
+          MIN_SYSTEM_VERSION="$(echo $MIN_SYSTEM_VERSION_PRINTOUT | cut -d'=' -f2)"
+          cat > ${{ env.app_name}}/Contents/Info.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleDevelopmentRegion</key>
+              <string>English</string>
+              <key>CFBundleDisplayName</key>
+              <string>${{ env.app_name }}</string>
+              <key>CFBundleExecutable</key>
+              <string>${{ env.package_name }}</string>
+              <!-- <key>CFBundleIconFile</key> -->
+              <!-- <string>sudoku_machine.icns</string> -->
+              <key>CFBundleIdentifier</key>
+              <string>dev.${{ github.repository_owner }}.${{ env.package_name }}</string>
+              <key>CFBundleInfoDictionaryVersion</key>
+              <string>6.0</string>
+              <key>CFBundleName</key>
+              <string>${{ env.app_name }}</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleShortVersionString</key>
+              <string>${{ env.ref_name }}</string>
+              <key>CFBundleVersion</key>
+              <string>${{ env.ref_name }}</string>
+              <key>LSMinimumSystemVersion</key>
+              <string>$MIN_SYSTEM_VERSION</string>
+          </dict>
+          </plist>
 
-          hdiutil create \
-            -fs HFS+ \
-            -volname "${{ env.package_name }}" \
-            -srcfolder "${{ env.app_name }}.app" \
-            ${{ env.package_name }}-macOS-intel.dmg
+          EOF
+
+          # Create a fancy DMG
+          brew install create-dmg
+          create-dmg \
+            --volname "${{ env.package_name }}" \
+            # --volicon assets/icon.icns \
+            --background "assets/images/dmg-background.png" \
+            --window-size 512 210 \
+            --icon-size 128 \
+            --icon "${{ env.app_name }}.app" 128 64 \
+            --hide-extension "${{ env.app_name }}.app" \
+            --app-drop-link 384 64 \
+            --codesign mrkjdy-sudoku_machine \
+            "${{ env.package_name }}-macOS-${{ matrix.dmg-platform }}.dmg" \
+            "${{ env.app_name }}.app"
 
       - name: Upload binaries to artifacts
         uses: actions/upload-artifact@v4
         with:
-          path: ${{ env.package_name }}-macOS-intel.dmg
-          name: macOS-intel
+          path: ${{ env.package_name }}-macOS-${{ matrix.dmg-platform }}.dmg
+          name: macOS-${{ matrix.dmg-platform }}
           retention-days: 1
 
       - name: Upload binaries to release
@@ -212,79 +258,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.package_name }}-macOS-intel.dmg
-          asset_name: ${{ env.package_name }}-macOS-intel-${{ github.ref_name }}.dmg
-          overwrite: true
-          tag: ${{ github.ref_name }}
-
-  build-macOS-apple-silicon:
-    name: Build macOS - Apple Silicon
-    runs-on: macOS-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin
-
-      - name: Build
-        run: |
-          cargo build --release --target aarch64-apple-darwin
-
-      # From https://docs.github.com/en/actions/use-cases-and-examples/deploying/installing-an-apple-certificate-on-macos-runners-for-xcode-development#add-a-step-to-your-workflow
-      - name: Install macOS Code Signing certificate
-        env:
-          MACOS_BUILD_CERTIFICATE_BASE64: ${{ secrets.MACOS_BUILD_CERTIFICATE_BASE64 }}
-          MACOS_P12_PASSWORD: ${{ secrets.MACOS_P12_PASSWORD }}
-          MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
-        run: |
-          # create variables
-          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
-          # import certificate from secrets
-          echo -n "$MACOS_BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-
-          # create temporary keychain
-          security create-keychain -p "$MACOS_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$MACOS_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          # import certificate to keychain
-          security import $CERTIFICATE_PATH -P "$MACOS_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -k "$MACOS_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
-
-      - name: Prepare Package
-        run: |
-          # Create .app
-          mkdir -p "${{ env.app_name }}.app/Contents/MacOS"
-          cp target/aarch64-apple-darwin/release/${{ env.package_name }} \
-            "${{ env.app_name }}.app/Contents/MacOS/"
-          cp -r assets "${{ env.app_name }}.app/Contents/MacOS/"
-
-          # Sign .app
-          codesign --force --deep --sign mrkjdy-sudoku_machine "${{ env.app_name }}.app"
-
-          # Create .dmg
-          hdiutil create \
-            -fs HFS+ \
-            -volname "${{ env.package_name }}-macOS-apple-silicon" \
-            -srcfolder "${{ env.app_name }}.app" \
-            ${{ env.package_name }}-macOS-apple-silicon.dmg
-
-      - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          path: ${{ env.package_name }}-macOS-apple-silicon.dmg
-          name: macOS-apple-silicon
-          retention-days: 1
-
-      - name: Upload binaries to release
-        if: ${{ github.event_name == 'release' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.package_name }}-macOS-apple-silicon.dmg
-          asset_name: ${{ env.package_name }}-macOS-apple-silicon-${{ github.ref_name }}.dmg
+          file: ${{ env.package_name }}-macOS-${{ matrix.dmg-platform }}.dmg
+          asset_name: ${{ env.package_name }}-macOS-${{ matrix.dmg-platform }}-${{ github.ref_name }}.dmg
           overwrite: true
           tag: ${{ github.ref_name }}
