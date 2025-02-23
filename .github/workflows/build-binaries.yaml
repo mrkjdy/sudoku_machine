@@ -147,22 +147,26 @@ jobs:
           tag: ${{ github.ref_name }}
 
   build-macos:
-    name: Build macOS - ${{ matrix.job-platform }}
+    name: Build macOS - ${{ matrix.platform.job_name }}
     strategy:
       matrix:
-        job-platform: [Apple Silicon, Intel]
-        dmg-platform: [apple-silicon, intel]
-        target: [aarch64-apple-darwin, x86_64-apple-darwin]
+        platform:
+          - job_name: Apple Silicon
+            dmg_name: apple-silicon
+            target: aarch64-apple-darwin
+          - job_name: Intel
+            dmg_name: intel
+            target: x86_64-apple-darwin
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.platform.target }}
 
       - name: Build
         run: |
-          cargo build --release --target ${{ matrix.target }}
+          cargo build --release --target ${{ matrix.platform.target }}
 
       # From https://docs.github.com/en/actions/use-cases-and-examples/deploying/installing-an-apple-certificate-on-macos-runners-for-xcode-development#add-a-step-to-your-workflow
       - name: Install macOS Code Signing certificate
@@ -192,12 +196,12 @@ jobs:
         run: |
           # Create .app
           mkdir -p "${{ env.app_name }}.app/Contents/MacOS"
-          cp target/${{ matrix.target }}/release/${{ env.package_name }} \
+          cp target/${{ matrix.platform.target }}/release/${{ env.package_name }} \
             "${{ env.app_name }}.app/Contents/MacOS/"
           cp -r assets "${{ env.app_name }}.app/Contents/MacOS/"
 
           # Create Info.plist
-          MIN_SYSTEM_VERSION_PRINTOUT="$(rustc --print=deployment-target --target ${{ matrix.target }})"
+          MIN_SYSTEM_VERSION_PRINTOUT="$(rustc --print=deployment-target --target ${{ matrix.platform.target }})"
           MIN_SYSTEM_VERSION="$(echo $MIN_SYSTEM_VERSION_PRINTOUT | cut -d'=' -f2)"
           cat > ${{ env.app_name}}/Contents/Info.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -243,14 +247,14 @@ jobs:
             --hide-extension "${{ env.app_name }}.app" \
             --app-drop-link 384 64 \
             --codesign mrkjdy-sudoku_machine \
-            "${{ env.package_name }}-macOS-${{ matrix.dmg-platform }}.dmg" \
+            "${{ env.package_name }}-macOS-${{ matrix.platform.dmg_name }}.dmg" \
             "${{ env.app_name }}.app"
 
       - name: Upload binaries to artifacts
         uses: actions/upload-artifact@v4
         with:
-          path: ${{ env.package_name }}-macOS-${{ matrix.dmg-platform }}.dmg
-          name: macOS-${{ matrix.dmg-platform }}
+          path: ${{ env.package_name }}-macOS-${{ matrix.platform.dmg_name }}.dmg
+          name: macOS-${{ matrix.platform.dmg_name }}
           retention-days: 1
 
       - name: Upload binaries to release
@@ -258,7 +262,7 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.package_name }}-macOS-${{ matrix.dmg-platform }}.dmg
-          asset_name: ${{ env.package_name }}-macOS-${{ matrix.dmg-platform }}-${{ github.ref_name }}.dmg
+          file: ${{ env.package_name }}-macOS-${{ matrix.platform.dmg_name }}.dmg
+          asset_name: ${{ env.package_name }}-macOS-${{ matrix.platform.dmg_name }}-${{ github.ref_name }}.dmg
           overwrite: true
           tag: ${{ github.ref_name }}
