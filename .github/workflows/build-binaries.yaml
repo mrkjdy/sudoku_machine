@@ -239,7 +239,6 @@ jobs:
           brew install create-dmg
           create-dmg \
             --volname "${{ env.package_name }}" \
-            # --volicon assets/icon.icns \
             --background "assets/images/dmg-background.png" \
             --window-size 512 210 \
             --icon-size 128 \
