@@ -3,6 +3,7 @@ use plugins::game::PuzzleType;
 
 pub mod plugins {
     pub mod common;
+    pub mod fps;
     pub mod game;
     pub mod menu;
     pub mod nav;
