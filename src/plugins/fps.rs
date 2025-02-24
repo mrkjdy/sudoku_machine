@@ -4,7 +4,7 @@ use bevy::{diagnostic::DiagnosticsStore, prelude::*};
 use super::common::theme::Themed;
 
 pub fn fps_plugin(app: &mut App) {
-    app.add_plugins(FrameTimeDiagnosticsPlugin::default())
+    app.add_plugins(FrameTimeDiagnosticsPlugin)
         .add_systems(Startup, fps_setup)
         .add_systems(Update, fps_system);
 }
