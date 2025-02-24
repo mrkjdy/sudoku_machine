@@ -2,6 +2,8 @@ use bevy::{
     prelude::*,
     window::{PresentMode, WindowMode},
 };
+#[cfg(debug_assertions)]
+use sudoku_machine::plugins::fps;
 use sudoku_machine::{
     plugins::{common::theme, game, menu, nav},
     AppState, PuzzleSettings, APP_TITLE,
@@ -31,6 +33,8 @@ fn main() {
             menu::menu_plugin,
             nav::nav_plugin,
             game::game_plugin,
+            #[cfg(debug_assertions)]
+            fps::fps_plugin,
         ))
         .run();
 }
