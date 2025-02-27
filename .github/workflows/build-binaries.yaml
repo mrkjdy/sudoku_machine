@@ -76,12 +76,12 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: wasm
-          path: wasm
+          path: wasm.zip
+      - run: unzip wasm.zip -d wasm
       - uses: actions/upload-pages-artifact@v3
         with:
           path: wasm
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4
 
   build-linux:
