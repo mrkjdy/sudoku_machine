@@ -77,10 +77,10 @@ jobs:
         id: download-artifact
         with:
           name: wasm
-          path: wasm
+      - run: unzip ${{ env.package_name }}.zip -d wasm-artifact
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: wasm
+          path: wasm-artifact
       - id: deployment
         uses: actions/deploy-pages@v4
 
