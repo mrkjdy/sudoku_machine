@@ -59,6 +59,31 @@ jobs:
           overwrite: true
           tag: ${{ github.ref_name }}
 
+  deploy-to-github-pages:
+    name: Deploy to GitHub Pages
+    needs: build-wasm
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: wasm
+          path: wasm
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: wasm
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
