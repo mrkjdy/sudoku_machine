@@ -74,10 +74,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - uses: actions/download-artifact@v4
+        id: download-artifact
         with:
           name: wasm
           path: wasm.zip
-      - run: unzip wasm.zip -d wasm
+      - run: unzip ${{ steps.download-artifact.outputs.download-path }} -d wasm
       - uses: actions/upload-pages-artifact@v3
         with:
           path: wasm
