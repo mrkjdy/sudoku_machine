@@ -77,8 +77,7 @@ jobs:
         id: download-artifact
         with:
           name: wasm
-          path: wasm.zip
-      - run: unzip ${{ steps.download-artifact.outputs.download-path }} -d wasm
+          path: wasm
       - uses: actions/upload-pages-artifact@v3
         with:
           path: wasm
