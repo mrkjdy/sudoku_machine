@@ -61,6 +61,7 @@ jobs:
 
   deploy-to-github-pages:
     name: Deploy to GitHub Pages
+    if: ${{ github.event_name == 'release' }}
     needs: build-wasm
     permissions:
       contents: read
