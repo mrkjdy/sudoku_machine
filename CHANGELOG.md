@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.1.9](https://github.com/mrkjdy/sudoku_machine/compare/v0.1.8...v0.1.9) - 2025-03-10
+
+### Fixed
+
+- disable BorderlessFullscreen on wasm ([#49](https://github.com/mrkjdy/sudoku_machine/pull/49))
+
+### Other
+
+- cargo update ([#50](https://github.com/mrkjdy/sudoku_machine/pull/50))
+
 ## [0.1.8](https://github.com/mrkjdy/sudoku_machine/compare/v0.1.7...v0.1.8) - 2025-02-28
 
 ### Fixed
