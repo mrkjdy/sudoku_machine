@@ -1,7 +1,6 @@
-use bevy::{
-    prelude::*,
-    window::{PresentMode, WindowMode},
-};
+#[cfg(not(target_family = "wasm"))]
+use bevy::window::WindowMode;
+use bevy::{prelude::*, window::PresentMode};
 #[cfg(debug_assertions)]
 use sudoku_machine::plugins::fps;
 use sudoku_machine::{
@@ -15,6 +14,7 @@ fn main() {
             primary_window: Some(Window {
                 title: APP_TITLE.into(),
                 present_mode: PresentMode::AutoVsync,
+                #[cfg(not(target_family = "wasm"))]
                 mode: WindowMode::BorderlessFullscreen(MonitorSelection::Current),
                 // Tells bevy to use the system theme
                 window_theme: None,
