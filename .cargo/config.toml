@@ -21,3 +21,7 @@ clippyww = "clippy --target wasm32-unknown-unknown --features bevy/webgpu"
 [target.'cfg(target_family = "wasm")']
 runner = "wasm-server-runner"
 rustflags = ["--cfg", "getrandom_backend=\"wasm_js\""]
+
+[env]
+WASM_SERVER_RUNNER_ADDRESS = "0.0.0.0"
+WASM_SERVER_RUNNER_HTTPS = "true"
