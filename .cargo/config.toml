@@ -6,13 +6,22 @@ rund = "run --features bevy/dynamic_linking"
 testd = "test --features bevy/dynamic_linking"
 clippyd = "clippy --features bevy/dynamic_linking"
 
-# Aliases for wasm
+# Aliases for wasm - WebGL2
 checkw = "check --target wasm32-unknown-unknown"
 buildw = "build --target wasm32-unknown-unknown"
 runw = "run --target wasm32-unknown-unknown"
-# testw = "test --target wasm32-unknown-unknown"
 clippyw = "clippy --target wasm32-unknown-unknown"
+
+# Aliases for wasm - WebGPU
+checkww = "check --target wasm32-unknown-unknown --features bevy/webgpu"
+buildww = "build --target wasm32-unknown-unknown --features bevy/webgpu"
+runww = "run --target wasm32-unknown-unknown --features bevy/webgpu"
+clippyww = "clippy --target wasm32-unknown-unknown --features bevy/webgpu"
 
 [target.'cfg(target_family = "wasm")']
 runner = "wasm-server-runner"
 rustflags = ["--cfg", "getrandom_backend=\"wasm_js\""]
+
+[env]
+WASM_SERVER_RUNNER_ADDRESS = "0.0.0.0"
+WASM_SERVER_RUNNER_HTTPS = "true"
