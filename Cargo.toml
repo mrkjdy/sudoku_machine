@@ -19,7 +19,7 @@ strum = "0.27.1"
 strum_macros = "0.27.1"
 
 [dev-dependencies]
-divan = "0.1.14"
+divan = "0.1.21"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 futures-util = { version = "0.3.31", features = ["io"] }
