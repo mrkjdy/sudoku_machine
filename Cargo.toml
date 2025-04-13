@@ -19,13 +19,13 @@ strum = "0.27.1"
 strum_macros = "0.27.1"
 
 [dev-dependencies]
-divan = "0.1.14"
+divan = "0.1.21"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 futures-util = { version = "0.3.31", features = ["io"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-arboard = "3.4.0"
+arboard = "3.5.0"
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 getrandom = { version = "0.3", features = ["wasm_js"] }
