@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.1.9](https://github.com/mrkjdy/sudoku_machine/compare/v0.1.8...v0.1.9) - 2025-04-13
+
+### Fixed
+
+- disable BorderlessFullscreen on wasm ([#49](https://github.com/mrkjdy/sudoku_machine/pull/49))
+
+### Other
+
+- add CODEOWNERS ([#59](https://github.com/mrkjdy/sudoku_machine/pull/59))
+- *(deps)* bump divan from 0.1.17 to 0.1.18 ([#54](https://github.com/mrkjdy/sudoku_machine/pull/54))
+- *(deps)* bump arboard from 3.4.1 to 3.5.0 ([#53](https://github.com/mrkjdy/sudoku_machine/pull/53))
+- *(deps)* bump getrandom from 0.3.1 to 0.3.2 ([#52](https://github.com/mrkjdy/sudoku_machine/pull/52))
+- *(deps)* bump crossbeam-channel from 0.5.14 to 0.5.15 ([#55](https://github.com/mrkjdy/sudoku_machine/pull/55))
+- only cargo build on non-release events ([#58](https://github.com/mrkjdy/sudoku_machine/pull/58))
+- don't install code signing cert on dependabot ([#56](https://github.com/mrkjdy/sudoku_machine/pull/56))
+- cargo update ([#50](https://github.com/mrkjdy/sudoku_machine/pull/50))
+
 ## [0.1.8](https://github.com/mrkjdy/sudoku_machine/compare/v0.1.7...v0.1.8) - 2025-02-28
 
 ### Fixed
