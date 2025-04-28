@@ -8,7 +8,7 @@ authors = ["Mark Judy"]
 repository = "https://github.com/mrkjdy/sudoku_machine"
 
 [dependencies]
-bevy = { version = "0.15" }
+bevy = { version = "0.16" }
 dark-light = "2.0"
 fastrand = "2.1.1"
 indoc = "2.0.5"
