@@ -8,7 +8,7 @@ authors = ["Mark Judy"]
 repository = "https://github.com/mrkjdy/sudoku_machine"
 
 [dependencies]
-bevy = { version = "0.15" }
+bevy = "0.16"
 dark-light = "2.0"
 fastrand = "2.1.1"
 indoc = "2.0.5"
@@ -31,7 +31,7 @@ arboard = "3.5.0"
 getrandom = { version = "0.3", features = ["wasm_js"] }
 web-sys = { version = "0.3", features = ["Clipboard", "Navigator", "Window"] }
 wasm-bindgen-futures = "0.4"
-bevy_defer = "0.13.3"
+bevy_defer = "0.14.0"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
