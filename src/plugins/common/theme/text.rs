@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::plugins::common::widgets::text_input::TextInputCursor;
+use crate::plugins::common::bundles::text_input::TextInputCursor;
 
 use super::{Theme, Themed};
 

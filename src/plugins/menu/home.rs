@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::spawn::SpawnIter, prelude::*};
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter};
 
@@ -41,19 +41,6 @@ enum HomeMenuButton {
 fn home_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Commands) {
     nav_state.set(NavState::Exit);
 
-    let container_bundle = (
-        HomeMenuContainer,
-        Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            flex_direction: FlexDirection::Column,
-            row_gap: Val::Px(20.0),
-            ..default()
-        },
-    );
-
     let title_bundle = (
         Text::new(APP_TITLE),
         TextFont::from_font_size(80.0),
@@ -70,7 +57,8 @@ fn home_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Com
             Text::new(home_menu_button.to_string()),
             TextFont::from_font_size(40.0),
         );
-        let button_bundle = (
+
+        (
             home_menu_button,
             Node {
                 justify_content: JustifyContent::Center,
@@ -79,16 +67,24 @@ fn home_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Com
                 width: Val::Px(32.0 * PIXELS_PER_CH),
                 ..default()
             },
-        );
-        (button_bundle, button_text_bundle)
+            children![button_text_bundle],
+        )
     });
 
-    commands.spawn(container_bundle).with_children(|parent| {
-        parent.spawn(title_bundle);
-        for (button_bundle, button_text_bundle) in button_bundles {
-            parent.spawn(button_bundle).with_child(button_text_bundle);
-        }
-    });
+    commands.spawn((
+        HomeMenuContainer,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(20.0),
+            ..default()
+        },
+        Children::spawn(Spawn(title_bundle)),
+        Children::spawn(SpawnIter(button_bundles)),
+    ));
 }
 
 fn home_menu_action_system(

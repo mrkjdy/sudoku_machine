@@ -38,7 +38,14 @@ struct NavButton;
 struct NavButtonIcon;
 
 fn nav_setup(mut commands: Commands) {
-    let nav_button_bundle = (
+    // TODO - use SVGs instead of text
+    let nav_button_icon_bundle = (
+        NavButtonIcon,
+        Text::new(NavState::default()),
+        TextFont::from_font_size(60.0),
+    );
+
+    commands.spawn((
         NavButton,
         Node {
             justify_content: JustifyContent::Center,
@@ -49,25 +56,15 @@ fn nav_setup(mut commands: Commands) {
             top: Val::Px(20.0),
             ..default()
         },
-    );
-
-    // TODO - use SVGs instead of text
-    let nav_button_icon_bundle = (
-        NavButtonIcon,
-        Text::new(NavState::default()),
-        TextFont::from_font_size(60.0),
-    );
-
-    commands
-        .spawn(nav_button_bundle)
-        .with_child(nav_button_icon_bundle);
+        children![nav_button_icon_bundle],
+    ));
 }
 
 fn nav_icon_system(
     mut nav_button_icon_query: Query<&mut Text, With<NavButtonIcon>>,
     nav_state: Res<State<NavState>>,
 ) {
-    let mut text = nav_button_icon_query.single_mut();
+    let mut text = nav_button_icon_query.single_mut().unwrap();
     text.0 = nav_state.get().to_string();
 }
 
@@ -87,7 +84,7 @@ fn nav_button_action(
                 menu_state.set(MenuState::Home);
             }
             NavState::Exit => {
-                app_exit_events.send(AppExit::Success);
+                app_exit_events.write(AppExit::Success);
             }
             NavState::Pause => {
                 app_state.set(AppState::Menu);

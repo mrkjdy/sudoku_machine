@@ -8,8 +8,6 @@ use crate::plugins::common::clipboard::ClipboardResource;
 use crate::plugins::common::theme::focus::FocusedEntity;
 use crate::plugins::common::theme::Themed;
 
-use super::Spawnable;
-
 pub fn text_input_plugin(app: &mut App) {
     app.add_plugins(clipboard_plugin)
         .insert_resource(BlinkTimer(Timer::from_seconds(0.5, TimerMode::Repeating)))
@@ -30,23 +28,6 @@ pub struct TextInputContainer {
     pub is_empty: bool,
 }
 
-impl Default for TextInputContainer {
-    fn default() -> Self {
-        Self {
-            placeholder_text: default(),
-            is_empty: true,
-        }
-    }
-}
-
-#[derive(Default)]
-pub struct TextInputWidget {
-    pub text_input_container: TextInputContainer,
-    pub text_font: TextFont,
-    pub container_node: Node,
-    pub text_node: Node,
-}
-
 #[derive(Component)]
 #[require(Themed, Text)]
 struct TextInputText;
@@ -55,60 +36,61 @@ struct TextInputText;
 #[require(Node)]
 pub struct TextInputCursor;
 
-impl Spawnable for TextInputWidget {
-    fn spawn_with_components<'a, S: super::Spawn>(
-        &self,
-        spawner: &'a mut S,
-        components: impl Bundle,
-    ) -> EntityCommands<'a> {
-        let TextInputWidget {
-            text_input_container,
-            text_font,
-            container_node,
-            text_node,
-        } = self;
+#[derive(Default)]
+pub struct TextInputBundleOptions {
+    pub placeholder_text: String,
+    pub text_font: TextFont,
+    pub container_node: Node,
+    pub text_node: Node,
+}
 
-        let container_bundle = (
-            text_input_container.clone(),
-            Node {
-                overflow: Overflow {
-                    x: OverflowAxis::Hidden,
-                    y: OverflowAxis::Hidden,
-                },
-                align_items: AlignItems::Center,
-                ..container_node.clone()
+pub fn text_input_bundle(options: TextInputBundleOptions) -> impl Bundle {
+    let TextInputBundleOptions {
+        placeholder_text,
+        text_font,
+        container_node,
+        text_node,
+    } = options;
+
+    let font_size = text_font.font_size;
+
+    let text_input_text_bundle = (
+        TextInputText,
+        Text::new(placeholder_text.clone()),
+        Node {
+            height: Val::Px(text_font.font_size),
+            margin: UiRect::vertical(Val::Px(8.0)),
+            justify_content: JustifyContent::Center,
+            ..text_node
+        },
+        text_font,
+    );
+
+    let text_input_cursor_bundle = (
+        TextInputCursor,
+        Node {
+            width: Val::Px(1.0),
+            height: Val::Px(font_size + 4.0),
+            ..default()
+        },
+        Visibility::Hidden,
+    );
+
+    (
+        TextInputContainer {
+            placeholder_text,
+            is_empty: true,
+        },
+        Node {
+            overflow: Overflow {
+                x: OverflowAxis::Hidden,
+                y: OverflowAxis::Hidden,
             },
-        );
-
-        let text_bundle = (
-            TextInputText,
-            Text::new(text_input_container.placeholder_text.clone()),
-            Node {
-                height: Val::Px(text_font.font_size),
-                margin: UiRect::vertical(Val::Px(8.0)),
-                justify_content: JustifyContent::Center,
-                ..text_node.clone()
-            },
-            text_font.clone(),
-        );
-
-        let cursor_bundle = (
-            TextInputCursor,
-            Node {
-                width: Val::Px(1.0),
-                height: Val::Px(text_font.font_size + 4.0),
-                ..default()
-            },
-            Visibility::Hidden,
-        );
-
-        let mut ec = spawner.spawn((container_bundle, components));
-        ec.with_children(|parent| {
-            parent.spawn(text_bundle);
-            parent.spawn(cursor_bundle);
-        });
-        ec
-    }
+            align_items: AlignItems::Center,
+            ..container_node
+        },
+        children![text_input_text_bundle, text_input_cursor_bundle],
+    )
 }
 
 fn text_input_focus_system(

@@ -4,7 +4,7 @@ use bevy::{diagnostic::DiagnosticsStore, prelude::*};
 use super::common::theme::Themed;
 
 pub fn fps_plugin(app: &mut App) {
-    app.add_plugins(FrameTimeDiagnosticsPlugin)
+    app.add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_systems(Startup, fps_setup)
         .add_systems(Update, fps_system);
 }
@@ -55,6 +55,6 @@ fn fps_system(
     let fps = 1000.0 / *smoothed_frame_time_ms;
 
     // Set the new FPS value in the text component
-    let mut text = fps_text_query.single_mut();
+    let mut text = fps_text_query.single_mut().unwrap();
     text.0 = format!("{:>7.2}", fps);
 }

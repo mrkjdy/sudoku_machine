@@ -5,12 +5,14 @@ use crate::{
     despawn_component,
     plugins::{
         common::{
-            theme::{text::ThemedFontWeight, Themed},
-            widgets::{
-                dropdown::{self, DropdownContainer, DropdownWidget},
-                text_input::{text_input_plugin, TextInputContainer, TextInputWidget},
-                Spawnable,
+            bundles::{
+                dropdown::{self, dropdown_bundle, DropdownBundleOptions, DropdownContainer},
+                text_input::{
+                    text_input_bundle, text_input_plugin, TextInputBundleOptions,
+                    TextInputContainer,
+                },
             },
+            theme::{text::ThemedFontWeight, Themed},
         },
         game::PuzzleType,
         nav::NavState,
@@ -61,22 +63,7 @@ fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut command
     let margin = UiRect::bottom(Val::Px(20.0));
     let body_font_size = 20.0;
 
-    let initial_selected_type = PuzzleType::default();
-
-    let menu_container_bundle = (
-        NewMenuContainer,
-        Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Start,
-            flex_direction: FlexDirection::Column,
-            padding: UiRect::top(Val::Px(80.0)),
-            ..default()
-        },
-    );
-
-    let menu_title_bundle = (
+    let title_bundle = (
         Text::new("New Puzzle"),
         TextFont::from_font_size(36.0),
         Node {
@@ -87,7 +74,7 @@ fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut command
         ThemedFontWeight::Bold,
     );
 
-    let subtitle_bundle = (
+    let base_heading_bundle = (
         TextFont::from_font_size(body_font_size),
         Node {
             width,
@@ -98,30 +85,33 @@ fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut command
         ThemedFontWeight::Bold,
     );
 
-    let type_subtitle_bundle = (Text::new("Type"), subtitle_bundle.clone());
+    let initial_selected_type = PuzzleType::default();
 
-    let type_dropdown_widget = DropdownWidget {
-        dropdown: DropdownContainer {
+    let type_input_heading_bundle = (Text::new("Type"), base_heading_bundle.clone());
+
+    let type_dropdown_bundle = (
+        PuzzleTypeDropdown,
+        dropdown_bundle(DropdownBundleOptions {
             selected: initial_selected_type as usize,
             options: PuzzleType::iter().map(|o| o.to_string()).collect(),
-        },
-        text_font: TextFont::from_font_size(body_font_size),
-        container_node: Node {
-            width,
-            max_width,
-            margin,
-            ..default()
-        },
-        button_node: Node {
-            padding: UiRect::all(Val::Px(5.0)),
-            ..default()
-        },
-        ..Default::default()
-    };
+            text_font: TextFont::from_font_size(body_font_size),
+            container_node: Node {
+                width,
+                max_width,
+                margin,
+                ..default()
+            },
+            button_node: Node {
+                padding: UiRect::all(Val::Px(5.0)),
+                ..default()
+            },
+            ..Default::default()
+        }),
+    );
 
-    let description_subtitle_bundle = (Text::new("Description"), subtitle_bundle.clone());
+    let description_heading_bundle = (Text::new("Description"), base_heading_bundle.clone());
 
-    let description_text_bundle = (
+    let description_bundle = (
         PuzzleTypeDescriptionText,
         Text::new(initial_selected_type.description()),
         TextFont::from_font_size(body_font_size),
@@ -133,23 +123,23 @@ fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut command
         },
     );
 
-    let seed_subtitle_bundle = (Text::new("Seed"), subtitle_bundle.clone());
+    let seed_input_heading_bundle = (Text::new("Seed"), base_heading_bundle);
 
-    let seed_text_input_widget = TextInputWidget {
-        text_input_container: TextInputContainer {
+    let seed_text_input_bundle = (
+        SeedTextInput,
+        text_input_bundle(TextInputBundleOptions {
             placeholder_text: "Random...".into(),
-            ..default()
-        },
-        text_font: TextFont::from_font_size(body_font_size),
-        container_node: Node {
-            margin: UiRect::bottom(Val::Px(40.0)),
-            padding: UiRect::horizontal(Val::Px(5.0)),
-            width,
-            max_width,
-            ..default()
-        },
-        ..Default::default()
-    };
+            text_font: TextFont::from_font_size(body_font_size),
+            container_node: Node {
+                margin: UiRect::bottom(Val::Px(40.0)),
+                padding: UiRect::horizontal(Val::Px(5.0)),
+                width,
+                max_width,
+                ..default()
+            },
+            ..Default::default()
+        }),
+    );
 
     let start_button_bundle = (
         StartButton,
@@ -161,29 +151,31 @@ fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut command
             padding: UiRect::all(Val::Px(5.0)),
             ..default()
         },
+        children![(Text::new("Start"), TextFont::from_font_size(30.0), Themed)],
     );
 
-    let start_button_text_bundle = (Text::new("Start"), TextFont::from_font_size(30.0), Themed);
-
-    commands
-        .spawn(menu_container_bundle)
-        .with_children(|parent| {
-            parent.spawn(menu_title_bundle);
-
-            parent.spawn(type_subtitle_bundle);
-            type_dropdown_widget.spawn_with_components(parent, PuzzleTypeDropdown);
-
-            parent.spawn(description_subtitle_bundle);
-            parent.spawn(description_text_bundle);
-
-            parent.spawn(seed_subtitle_bundle);
-            seed_text_input_widget.spawn_with_components(parent, SeedTextInput);
-
-            // Start button
-            parent
-                .spawn(start_button_bundle)
-                .with_child(start_button_text_bundle);
-        });
+    commands.spawn((
+        NewMenuContainer,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Start,
+            flex_direction: FlexDirection::Column,
+            padding: UiRect::top(Val::Px(80.0)),
+            ..default()
+        },
+        children![
+            title_bundle,
+            type_input_heading_bundle,
+            type_dropdown_bundle,
+            description_heading_bundle,
+            description_bundle,
+            seed_input_heading_bundle,
+            seed_text_input_bundle,
+            start_button_bundle
+        ],
+    ));
 }
 
 fn description_system(
@@ -194,7 +186,7 @@ fn description_system(
     mut description_text_query: Query<&mut Text, With<PuzzleTypeDescriptionText>>,
 ) {
     for dropdown in dropdown_query.iter() {
-        let mut description_text = description_text_query.get_single_mut().unwrap();
+        let mut description_text = description_text_query.single_mut().unwrap();
         description_text.0 = PuzzleType::try_from(dropdown.selected)
             .unwrap()
             .description();
@@ -215,8 +207,8 @@ fn start_button_system(
         .filter(|interaction| **interaction == Interaction::Pressed)
     {
         // Read the puzzle settings from the dropdown and the seed input
-        let dropdown_data = dropdown_query.single();
-        let (seed_container_children, text_input_data) = seed_container_query.single();
+        let dropdown_data = dropdown_query.single().unwrap();
+        let (seed_container_children, text_input_data) = seed_container_query.single().unwrap();
         let seed_text = seed_text_query.get(seed_container_children[0]).unwrap();
         // Set the PuzzleSettings resource
         puzzle_settings.puzzle_type = PuzzleType::try_from(dropdown_data.selected).unwrap();

@@ -1,9 +1,7 @@
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::{ecs::spawn::SpawnIter, prelude::*};
 use strum_macros::Display;
 
 use crate::plugins::common::theme::{node::ListItemButton, Themed};
-
-use super::{Spawn, Spawnable};
 
 pub fn dropdown_plugin(app: &mut App) {
     app.add_systems(
@@ -48,14 +46,14 @@ enum SelectionIcon {
     Unselected,
 }
 
-#[derive(Default)]
-pub struct DropdownWidget {
-    pub dropdown: DropdownContainer,
-    pub text_font: TextFont,
-    pub container_node: Node,
-    pub button_node: Node,
-    pub button_text_node: Node,
-    pub list_node: Node,
+impl From<bool> for SelectionIcon {
+    fn from(b: bool) -> Self {
+        if b {
+            SelectionIcon::Selected
+        } else {
+            SelectionIcon::Unselected
+        }
+    }
 }
 
 #[derive(Component)]
@@ -86,121 +84,173 @@ struct DropdownListItemText;
 #[require(Themed, Text)]
 struct DropdownListItemIcon;
 
-impl Spawnable for DropdownWidget {
-    fn spawn_with_components<'a, S: Spawn>(
-        &self,
-        spawner: &'a mut S,
-        components: impl Bundle,
-    ) -> EntityCommands<'a> {
-        let DropdownWidget {
-            dropdown,
-            container_node,
-            button_node,
-            text_font,
-            button_text_node,
-            list_node,
-        } = self;
+struct DropdownButtonBundleOptions {
+    text: String,
+    text_font: TextFont,
+    button_node: Node,
+    button_text_node: Node,
+}
 
-        let container_bundle = (dropdown.clone(), container_node.clone());
+fn dropdown_button_bundle(options: DropdownButtonBundleOptions) -> impl Bundle {
+    let DropdownButtonBundleOptions {
+        text,
+        text_font,
+        button_node,
+        button_text_node,
+    } = options;
 
-        let button_bundle = (
-            Node {
-                justify_content: JustifyContent::SpaceBetween,
-                width: Val::Percent(100.0),
-                align_items: AlignItems::Center,
-                ..button_node.clone()
-            },
-            DropdownButton,
-        );
+    let dropdown_button_text_bundle = (
+        DropdownButtonText,
+        Text::new(text),
+        text_font.clone(),
+        button_text_node,
+    );
 
-        let initial_text = dropdown
-            .options
-            .get(dropdown.selected)
-            .unwrap_or(&"".to_string())
-            .clone();
+    let dropdown_button_icon_bundle = (
+        DropdownButtonIcon,
+        Text::new(DropdownIcon::Closed.to_string()),
+        text_font,
+    );
 
-        let button_text_bundle = (
-            Text::new(initial_text),
-            text_font.clone(),
-            button_text_node.clone(),
-            DropdownButtonText,
-        );
+    (
+        DropdownButton,
+        Node {
+            justify_content: JustifyContent::SpaceBetween,
+            width: Val::Percent(100.0),
+            align_items: AlignItems::Center,
+            ..button_node
+        },
+        children![dropdown_button_text_bundle, dropdown_button_icon_bundle],
+    )
+}
 
-        let button_icon_bundle = (
-            Text::new(DropdownIcon::Closed.to_string()),
-            text_font.clone(),
-            DropdownButtonIcon,
-        );
+struct DropdownListItemBundleOptions {
+    index: usize,
+    button_node: Node,
+    text: String,
+    text_font: TextFont,
+    selected: bool,
+}
 
-        let list_container_bundle = (
-            Node {
-                position_type: PositionType::Absolute,
-                flex_direction: FlexDirection::Column,
-                width: Val::Percent(100.0),
-                ..list_node.clone()
-            },
-            BackgroundColor(Color::default()),
-            Visibility::Hidden,
-            DropdownList,
-            GlobalZIndex(100),
-        );
+fn dropdown_list_item_bundle(options: DropdownListItemBundleOptions) -> impl Bundle {
+    let DropdownListItemBundleOptions {
+        index,
+        button_node,
+        text,
+        text_font,
+        selected,
+    } = options;
 
-        let list_item_bundles = dropdown
-            .options
-            .iter()
-            .enumerate()
-            .map(|(i, option)| {
-                let list_item_bundle = (
-                    Node {
-                        justify_content: JustifyContent::SpaceBetween,
-                        width: Val::Percent(100.0),
-                        align_items: AlignItems::Center,
-                        ..button_node.clone()
-                    },
-                    DropdownListItem(i),
-                );
-                let list_item_text_bundle = (
-                    Text::new(option.clone()),
-                    text_font.clone(),
-                    DropdownListItemText,
-                );
-                let list_item_icon_text = match i == dropdown.selected {
-                    true => SelectionIcon::Selected,
-                    false => SelectionIcon::Unselected,
-                }
-                .to_string();
-                let list_item_icon_bundle = (
-                    Text::new(list_item_icon_text),
-                    text_font.clone(),
-                    DropdownListItemIcon,
-                );
-                (
-                    list_item_bundle,
-                    list_item_text_bundle,
-                    list_item_icon_bundle,
-                )
-            })
-            .collect::<Vec<_>>();
+    let dropdown_list_item_text = (DropdownListItemText, Text::new(text), text_font.clone());
 
-        let mut ec = spawner.spawn((container_bundle, components));
-        ec.with_children(|parent| {
-            ChildBuild::spawn(parent, button_bundle).with_children(|parent| {
-                ChildBuild::spawn(parent, button_text_bundle);
-                ChildBuild::spawn(parent, button_icon_bundle);
-            });
-            ChildBuild::spawn(parent, list_container_bundle).with_children(|parent| {
-                for (list_item_bundle, list_item_text_bundle, list_item_icon_bundle) in
-                    list_item_bundles
-                {
-                    ChildBuild::spawn(parent, list_item_bundle).with_children(|parent| {
-                        ChildBuild::spawn(parent, list_item_text_bundle);
-                        ChildBuild::spawn(parent, list_item_icon_bundle);
-                    });
-                }
-            });
-        });
-        ec
-    }
+    let dropdown_list_item_icon = (
+        DropdownListItemIcon,
+        Text::new(SelectionIcon::from(selected).to_string()),
+        text_font,
+    );
+
+    (
+        DropdownListItem(index),
+        Node {
+            justify_content: JustifyContent::SpaceBetween,
+            width: Val::Percent(100.0),
+            align_items: AlignItems::Center,
+            ..button_node
+        },
+        children![dropdown_list_item_text, dropdown_list_item_icon],
+    )
+}
+
+struct DropdownListBundleOptions {
+    options: Vec<String>,
+    selected: usize,
+    list_node: Node,
+    button_node: Node,
+    text_font: TextFont,
+}
+
+fn dropdown_list_bundle(options: DropdownListBundleOptions) -> impl Bundle {
+    let DropdownListBundleOptions {
+        options,
+        selected,
+        list_node,
+        button_node,
+        text_font,
+    } = options;
+
+    let option_bundles = options.into_iter().enumerate().map(move |(index, text)| {
+        dropdown_list_item_bundle(DropdownListItemBundleOptions {
+            index,
+            button_node: button_node.clone(),
+            text,
+            text_font: text_font.clone(),
+            selected: index == selected,
+        })
+    });
+
+    (
+        DropdownList,
+        Node {
+            position_type: PositionType::Absolute,
+            flex_direction: FlexDirection::Column,
+            width: Val::Percent(100.0),
+            ..list_node
+        },
+        BackgroundColor(Color::default()),
+        Visibility::Hidden,
+        GlobalZIndex(100),
+        Children::spawn(SpawnIter(option_bundles)),
+    )
+}
+
+#[derive(Default)]
+pub struct DropdownBundleOptions {
+    pub options: Vec<String>,
+    pub selected: usize,
+    pub container_node: Node,
+    pub button_node: Node,
+    pub text_font: TextFont,
+    pub button_text_node: Node,
+    pub list_node: Node,
+}
+
+pub fn dropdown_bundle(options: DropdownBundleOptions) -> impl Bundle {
+    let DropdownBundleOptions {
+        options,
+        selected,
+        container_node,
+        button_node,
+        text_font,
+        button_text_node,
+        list_node,
+    } = options;
+
+    let initial_text = options
+        .get(selected)
+        .map(|s| s.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    let dropdown_button_bundle = dropdown_button_bundle(DropdownButtonBundleOptions {
+        text: initial_text,
+        text_font: text_font.clone(),
+        button_node: button_node.clone(),
+        button_text_node,
+    });
+
+    let dropdown_list_bundle = dropdown_list_bundle(DropdownListBundleOptions {
+        options: options.clone(),
+        selected,
+        list_node,
+        button_node,
+        text_font,
+    });
+
+    (
+        DropdownContainer { selected, options },
+        container_node,
+        children![dropdown_button_bundle, dropdown_list_bundle],
+    );
 }
 
 fn dropdown_button_text_system(
@@ -221,14 +271,14 @@ fn dropdown_button_text_system(
 
 #[allow(clippy::type_complexity)]
 fn dropdown_button_icon_system(
-    list_query: Query<(&Parent, &Visibility), (Changed<Visibility>, With<DropdownList>)>,
+    list_query: Query<(&ChildOf, &Visibility), (Changed<Visibility>, With<DropdownList>)>,
     container_query: Query<&Children, With<DropdownContainer>>,
     button_query: Query<&Children, With<DropdownButton>>,
     mut button_icon_query: Query<&mut Text, With<DropdownButtonIcon>>,
 ) {
-    for (list_parent, list_visibility) in list_query.iter() {
+    for (list_childof, list_visibility) in list_query.iter() {
         // Get the container and its children
-        let container_id = list_parent.get();
+        let container_id = list_childof.parent();
         let container_children = container_query.get(container_id).unwrap();
         // Get the button and its children
         let button_id = container_children[0];
@@ -246,16 +296,16 @@ fn dropdown_button_icon_system(
 
 fn dropdown_list_visibility_system(
     buttons: Res<ButtonInput<MouseButton>>,
-    button_query: Query<(&Interaction, &Parent), With<DropdownButton>>,
+    button_query: Query<(&Interaction, &ChildOf), With<DropdownButton>>,
     container_query: Query<&Children, With<DropdownContainer>>,
     mut list_query: Query<&mut Visibility, With<DropdownList>>,
 ) {
     if buttons.get_just_pressed().len() == 0 {
         return;
     }
-    for (&button_interaction, button_parent) in button_query.iter() {
+    for (&button_interaction, button_childof) in button_query.iter() {
         // Get the list
-        let container_id = button_parent.get();
+        let container_id = button_childof.parent();
         let container_children = container_query.get(container_id).unwrap();
         let list_id = container_children[1];
         let mut list_visibility = list_query.get_mut(list_id).unwrap();
@@ -272,24 +322,24 @@ fn dropdown_list_visibility_system(
 
 fn dropdown_list_selection_system(
     interacted_list_item_query: Query<
-        (&Interaction, &Parent, &DropdownListItem, &Children),
+        (&Interaction, &ChildOf, &DropdownListItem, &Children),
         Changed<Interaction>,
     >,
-    list_query: Query<(&Parent, &Children), With<DropdownList>>,
+    list_query: Query<(&ChildOf, &Children), With<DropdownList>>,
     mut container_query: Query<&mut DropdownContainer>,
     previous_list_item_query: Query<&Children, With<DropdownListItem>>,
     mut list_item_icon_query: Query<&mut Text, With<DropdownListItemIcon>>,
 ) {
-    for (interaction, parent, list_item, interacted_list_item_children) in
+    for (interaction, childof, list_item, interacted_list_item_children) in
         interacted_list_item_query.iter()
     {
         if *interaction != Interaction::Pressed {
             continue;
         }
         // Find the dropdown container for this pressed option
-        let list_id = parent.get();
-        let (dropdown_list_parent, list_items) = list_query.get(list_id).unwrap();
-        let dropdown_list_parent_id = dropdown_list_parent.get();
+        let list_id = childof.parent();
+        let (dropdown_list_childof, list_items) = list_query.get(list_id).unwrap();
+        let dropdown_list_parent_id = dropdown_list_childof.parent();
         let mut dropdown_container = container_query.get_mut(dropdown_list_parent_id).unwrap();
         // Remove the selected icon from the previous option
         let previous_list_item_id = list_items[dropdown_container.selected];
@@ -314,14 +364,14 @@ fn dropdown_list_selection_system(
 #[allow(clippy::type_complexity)]
 fn dropdown_list_position_system(
     button_query: Query<
-        (&Parent, &Node),
+        (&ChildOf, &Node),
         (Changed<Node>, With<DropdownButton>, Without<DropdownList>),
     >,
     container_query: Query<&Children, With<DropdownContainer>>,
     mut list_query: Query<&mut Node, With<DropdownList>>,
 ) {
-    for (button_parent, button_node) in button_query.iter() {
-        let container_id = button_parent.get();
+    for (button_childof, button_node) in button_query.iter() {
+        let container_id = button_childof.parent();
         let container_children = container_query.get(container_id).unwrap();
         let mut list_style = list_query.get_mut(container_children[1]).unwrap();
         list_style.top = button_node.height;
