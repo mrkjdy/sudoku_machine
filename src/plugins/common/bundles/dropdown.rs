@@ -250,7 +250,7 @@ pub fn dropdown_bundle(options: DropdownBundleOptions) -> impl Bundle {
         DropdownContainer { selected, options },
         container_node,
         children![dropdown_button_bundle, dropdown_list_bundle],
-    );
+    )
 }
 
 fn dropdown_button_text_system(
