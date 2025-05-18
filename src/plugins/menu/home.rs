@@ -82,8 +82,7 @@ fn home_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Com
             row_gap: Val::Px(20.0),
             ..default()
         },
-        Children::spawn(Spawn(title_bundle)),
-        Children::spawn(SpawnIter(button_bundles)),
+        Children::spawn((Spawn(title_bundle), SpawnIter(button_bundles))),
     ));
 }
 
