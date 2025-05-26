@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{node::ListItemButton, Theme};
+use super::{node::ThemedBorderColor, Theme};
 
 #[derive(Resource, Default)]
 pub struct FocusedEntity {
@@ -47,7 +47,7 @@ fn unfocus_system(
 fn focus_outline_system(
     theme: Res<Theme>,
     focused_entity: Res<FocusedEntity>,
-    mut border_query: Query<&mut BorderColor, Without<ListItemButton>>,
+    mut border_query: Query<&mut BorderColor, With<ThemedBorderColor>>,
 ) {
     if let Some(last) = focused_entity.last {
         if let Ok(mut last_border) = border_query.get_mut(last) {

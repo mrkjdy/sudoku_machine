@@ -5,7 +5,12 @@ use strum_macros::{Display, EnumIter};
 use crate::{
     despawn_component,
     plugins::{
-        common::theme::{text::ThemedFontWeight, Themed},
+        common::theme::{
+            node::{
+                ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect,
+            },
+            text::{ThemedFontWeight, ThemedTextColor},
+        },
         nav::NavState,
     },
     AppState, APP_TITLE,
@@ -30,7 +35,13 @@ pub fn home_menu_plugin(app: &mut App) {
 struct HomeMenuContainer;
 
 #[derive(Component, EnumIter, Display)]
-#[require(Themed, Button)]
+#[require(
+    Button,
+    ThemedBackgroundColor,
+    ThemedBorderColor,
+    ThemedBorderRadius,
+    ThemedBorderRect
+)]
 enum HomeMenuButton {
     Continue,
     #[strum(to_string = "New Puzzle")]
@@ -49,11 +60,13 @@ fn home_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Com
             ..default()
         },
         ThemedFontWeight::Bold,
+        ThemedTextColor,
     );
 
     let button_bundles = HomeMenuButton::iter().map(|home_menu_button| {
         let button_text_bundle = (
-            Themed,
+            ThemedFontWeight::Regular,
+            ThemedTextColor,
             Text::new(home_menu_button.to_string()),
             TextFont::from_font_size(40.0),
         );

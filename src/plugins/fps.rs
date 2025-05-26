@@ -1,7 +1,7 @@
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::{diagnostic::DiagnosticsStore, prelude::*};
 
-use super::common::theme::Themed;
+use super::common::theme::text::{ThemedFontWeight, ThemedTextColor};
 
 pub fn fps_plugin(app: &mut App) {
     app.add_plugins(FrameTimeDiagnosticsPlugin::default())
@@ -17,7 +17,8 @@ fn fps_setup(mut commands: Commands) {
         FpsText,
         Text::new(""),
         TextFont::from_font_size(12.0),
-        Themed,
+        ThemedFontWeight::Regular,
+        ThemedTextColor,
         Node {
             top: Val::Px(0.0),
             right: Val::Px(0.0),

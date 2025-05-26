@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{Theme, Themed};
+use super::{node::ThemedBackgroundColor, Theme};
 
 pub fn themed_button_plugin(app: &mut App) {
     app.add_systems(Update, themed_button_interaction_system);
@@ -11,7 +11,10 @@ fn themed_button_interaction_system(
     theme: Res<Theme>,
     mut themed_button_query: Query<
         (&mut BackgroundColor, &Interaction),
-        (Changed<Interaction>, (With<Themed>, With<Button>)),
+        (
+            Changed<Interaction>,
+            (With<ThemedBackgroundColor>, With<Button>),
+        ),
     >,
 ) {
     for (mut background_color, interaction) in themed_button_query.iter_mut() {
