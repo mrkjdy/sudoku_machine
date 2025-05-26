@@ -31,13 +31,13 @@ pub fn themed_text_plugin(app: &mut App) {
 fn themed_text_change_system(
     theme: Res<Theme>,
     mut themed_text_color_query: Query<&mut TextColor, With<ThemedTextColor>>,
-    mut text_cusor_query: Query<&mut BackgroundColor, With<TextInputCursor>>,
+    mut text_cursor_query: Query<&mut BackgroundColor, With<TextInputCursor>>,
     mut themed_font_weight_query: Query<(&mut TextFont, &ThemedFontWeight)>,
 ) {
     for mut text_color in themed_text_color_query.iter_mut() {
         text_color.0 = theme.text_color;
     }
-    for mut text_input_cursor_background_color in text_cusor_query.iter_mut() {
+    for mut text_input_cursor_background_color in text_cursor_query.iter_mut() {
         text_input_cursor_background_color.0 = theme.text_color;
     }
     for (mut text_font, font_weight) in themed_font_weight_query.iter_mut() {
