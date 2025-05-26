@@ -6,7 +6,12 @@ use bevy::prelude::*;
 use crate::plugins::common::clipboard::clipboard_plugin;
 use crate::plugins::common::clipboard::ClipboardResource;
 use crate::plugins::common::theme::focus::FocusedEntity;
-use crate::plugins::common::theme::Themed;
+use crate::plugins::common::theme::node::ThemedBackgroundColor;
+use crate::plugins::common::theme::node::ThemedBorderColor;
+use crate::plugins::common::theme::node::ThemedBorderRadius;
+use crate::plugins::common::theme::node::ThemedBorderRect;
+use crate::plugins::common::theme::text::ThemedFontWeight;
+use crate::plugins::common::theme::text::ThemedTextColor;
 
 pub fn text_input_plugin(app: &mut App) {
     app.add_plugins(clipboard_plugin)
@@ -22,14 +27,21 @@ pub fn text_input_plugin(app: &mut App) {
 }
 
 #[derive(Component, Clone)]
-#[require(Themed, Node, Interaction)]
+#[require(
+    Node,
+    Interaction,
+    ThemedBackgroundColor,
+    ThemedBorderColor,
+    ThemedBorderRadius,
+    ThemedBorderRect
+)]
 pub struct TextInputContainer {
     pub placeholder_text: String,
     pub is_empty: bool,
 }
 
 #[derive(Component)]
-#[require(Themed, Text)]
+#[require(Text, ThemedFontWeight::Regular, ThemedTextColor)]
 struct TextInputText;
 
 #[derive(Component)]

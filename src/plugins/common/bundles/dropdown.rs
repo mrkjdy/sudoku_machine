@@ -1,7 +1,10 @@
 use bevy::{ecs::spawn::SpawnIter, prelude::*};
 use strum_macros::Display;
 
-use crate::plugins::common::theme::{node::ListItemButton, Themed};
+use crate::plugins::common::theme::{
+    node::{ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect},
+    text::{ThemedFontWeight, ThemedTextColor},
+};
 
 pub fn dropdown_plugin(app: &mut App) {
     app.add_systems(
@@ -57,31 +60,43 @@ impl From<bool> for SelectionIcon {
 }
 
 #[derive(Component)]
-#[require(Themed, Button)]
+#[require(
+    Button,
+    ThemedBackgroundColor,
+    ThemedBorderColor,
+    ThemedBorderRadius,
+    ThemedBorderRect
+)]
 struct DropdownButton;
 
 #[derive(Component)]
-#[require(Themed, Text)]
+#[require(Text, ThemedFontWeight::Regular, ThemedTextColor)]
 struct DropdownButtonText;
 
 #[derive(Component)]
-#[require(Themed, Text)]
+#[require(Text, ThemedFontWeight::Regular, ThemedTextColor)]
 struct DropdownButtonIcon;
 
 #[derive(Component)]
-#[require(Themed, Node)]
+#[require(
+    Node,
+    ThemedBackgroundColor,
+    ThemedBorderColor,
+    ThemedBorderRadius,
+    ThemedBorderRect
+)]
 struct DropdownList;
 
 #[derive(Component)]
-#[require(ListItemButton)]
+#[require(Button, ThemedBackgroundColor, ThemedBorderRadius)]
 struct DropdownListItem(usize);
 
 #[derive(Component)]
-#[require(Themed, Text)]
+#[require(Text, ThemedFontWeight::Regular, ThemedTextColor)]
 struct DropdownListItemText;
 
 #[derive(Component)]
-#[require(Themed, Text)]
+#[require(Text, ThemedFontWeight::Regular, ThemedTextColor)]
 struct DropdownListItemIcon;
 
 struct DropdownButtonBundleOptions {

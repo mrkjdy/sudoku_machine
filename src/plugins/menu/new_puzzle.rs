@@ -12,7 +12,12 @@ use crate::{
                     TextInputContainer,
                 },
             },
-            theme::{text::ThemedFontWeight, Themed},
+            theme::{
+                node::{
+                    ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect,
+                },
+                text::{ThemedFontWeight, ThemedTextColor},
+            },
         },
         game::PuzzleType,
         nav::NavState,
@@ -44,14 +49,20 @@ struct NewMenuContainer;
 struct PuzzleTypeDropdown;
 
 #[derive(Component)]
-#[require(Themed, Text)]
+#[require(Text, ThemedFontWeight::Regular, ThemedTextColor)]
 struct PuzzleTypeDescriptionText;
 
 #[derive(Component)]
 struct SeedTextInput;
 
 #[derive(Component)]
-#[require(Themed, Button)]
+#[require(
+    Button,
+    ThemedBackgroundColor,
+    ThemedBorderColor,
+    ThemedBorderRadius,
+    ThemedBorderRect
+)]
 struct StartButton;
 
 fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Commands) {
@@ -83,6 +94,7 @@ fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut command
             ..default()
         },
         ThemedFontWeight::Bold,
+        ThemedTextColor,
     );
 
     let initial_selected_type = PuzzleType::default();
@@ -151,7 +163,12 @@ fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut command
             padding: UiRect::all(Val::Px(5.0)),
             ..default()
         },
-        children![(Text::new("Start"), TextFont::from_font_size(30.0), Themed)],
+        children![(
+            Text::new("Start"),
+            TextFont::from_font_size(30.0),
+            ThemedFontWeight::Bold,
+            ThemedTextColor
+        )],
     );
 
     commands.spawn((

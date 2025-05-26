@@ -65,9 +65,6 @@ impl Default for Theme {
     }
 }
 
-#[derive(Component, Default)]
-pub struct Themed;
-
 pub fn theme_plugin(app: &mut App) {
     app.init_resource::<Theme>()
         .add_systems(Startup, theme_init_system)

@@ -3,7 +3,10 @@ use strum_macros::Display;
 
 use crate::{plugins::menu::MenuState, AppState};
 
-use super::common::theme::Themed;
+use super::common::theme::{
+    node::{ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect},
+    text::{ThemedFontWeight, ThemedTextColor},
+};
 
 pub fn nav_plugin(app: &mut App) {
     app.init_state::<NavState>()
@@ -30,11 +33,17 @@ impl From<NavState> for String {
 }
 
 #[derive(Component)]
-#[require(Themed, Button)]
+#[require(
+    Button,
+    ThemedBackgroundColor,
+    ThemedBorderColor,
+    ThemedBorderRadius,
+    ThemedBorderRect
+)]
 struct NavButton;
 
 #[derive(Component)]
-#[require(Themed, Text)]
+#[require(Text, ThemedFontWeight::Regular, ThemedTextColor)]
 struct NavButtonIcon;
 
 fn nav_setup(mut commands: Commands) {
