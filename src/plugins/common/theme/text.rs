@@ -10,6 +10,7 @@ pub enum ThemedFontWeight {
     #[default]
     Regular,
     Bold,
+    Symbolic,
 }
 
 #[derive(Component, Default, Clone, Copy)]
@@ -44,6 +45,7 @@ fn themed_text_change_system(
         text_font.font = match font_weight {
             ThemedFontWeight::Regular => theme.text_font_regular.clone(),
             ThemedFontWeight::Bold => theme.text_font_bold.clone(),
+            ThemedFontWeight::Symbolic => theme.text_font_symbols.clone(),
         };
     }
 }
@@ -72,6 +74,7 @@ fn themed_font_weight_system(
         text_font.font = match font_weight {
             ThemedFontWeight::Regular => theme.text_font_regular.clone(),
             ThemedFontWeight::Bold => theme.text_font_bold.clone(),
+            ThemedFontWeight::Symbolic => theme.text_font_symbols.clone(),
         };
     }
 }
