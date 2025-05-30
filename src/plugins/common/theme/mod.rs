@@ -18,6 +18,7 @@ struct Theme {
     clear_color: Color,
     text_font_regular: Handle<Font>,
     text_font_bold: Handle<Font>,
+    text_font_symbols: Handle<Font>,
     text_color: Color,
     border_rect: UiRect,
     border_color: BorderColor,
@@ -28,11 +29,16 @@ struct Theme {
 }
 
 impl Theme {
-    fn dark(text_font_regular: Handle<Font>, text_font_bold: Handle<Font>) -> Self {
+    fn dark(
+        text_font_regular: Handle<Font>,
+        text_font_bold: Handle<Font>,
+        text_font_symbols: Handle<Font>,
+    ) -> Self {
         Self {
             clear_color: Color::srgb_u8(13, 17, 23), // #0D1117
             text_font_regular,
             text_font_bold,
+            text_font_symbols,
             text_color: Color::srgb(1.0, 1.0, 1.0),
             border_rect: UiRect::all(Val::Px(2.0)),
             border_color: BorderColor(Color::srgb_u8(48, 54, 61)), // #30363D
@@ -43,11 +49,16 @@ impl Theme {
         }
     }
 
-    fn light(text_font_regular: Handle<Font>, text_font_bold: Handle<Font>) -> Self {
+    fn light(
+        text_font_regular: Handle<Font>,
+        text_font_bold: Handle<Font>,
+        text_font_symbols: Handle<Font>,
+    ) -> Self {
         Self {
             clear_color: Color::srgb(1.0, 1.0, 1.0),
             text_font_regular,
             text_font_bold,
+            text_font_symbols,
             text_color: Color::srgb(0.0, 0.0, 0.0),
             border_rect: UiRect::all(Val::Px(2.0)),
             border_color: BorderColor(Color::srgb(0.1, 0.1, 0.1)),
@@ -61,7 +72,7 @@ impl Theme {
 
 impl Default for Theme {
     fn default() -> Self {
-        Self::light(default(), default())
+        Self::light(default(), default(), default())
     }
 }
 
@@ -83,12 +94,17 @@ fn theme_init_system(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     let text_font_regular = asset_server.load("fonts/OpenSans-Regular.ttf");
     let text_font_bold = asset_server.load("fonts/OpenSans-Bold.ttf");
+    let text_font_symbols = asset_server.load("fonts/NotoSansSymbols2-Regular.ttf");
 
     // Use system theme to set initial app theme
     let app_theme: Theme = match dark_light::detect().unwrap_or(dark_light::Mode::Unspecified) {
-        dark_light::Mode::Dark => Theme::dark(text_font_regular, text_font_bold),
-        dark_light::Mode::Unspecified => Theme::light(text_font_regular, text_font_bold),
-        dark_light::Mode::Light => Theme::light(text_font_regular, text_font_bold),
+        dark_light::Mode::Dark => Theme::dark(text_font_regular, text_font_bold, text_font_symbols),
+        dark_light::Mode::Unspecified => {
+            Theme::light(text_font_regular, text_font_bold, text_font_symbols)
+        }
+        dark_light::Mode::Light => {
+            Theme::light(text_font_regular, text_font_bold, text_font_symbols)
+        }
     };
 
     // Set the theme as a resource for use across the app
@@ -103,10 +119,13 @@ fn theme_change_system(
     for ev in ev_window_theme_changed.read() {
         let text_font_regular = current_theme.text_font_regular.clone();
         let text_font_bold = current_theme.text_font_bold.clone();
+        let text_font_symbols = current_theme.text_font_symbols.clone();
 
         let app_theme: Theme = match ev.theme {
-            WindowTheme::Dark => Theme::dark(text_font_regular, text_font_bold),
-            WindowTheme::Light => Theme::light(text_font_regular, text_font_bold),
+            WindowTheme::Dark => Theme::dark(text_font_regular, text_font_bold, text_font_symbols),
+            WindowTheme::Light => {
+                Theme::light(text_font_regular, text_font_bold, text_font_symbols)
+            }
         };
 
         // Update the app theme
