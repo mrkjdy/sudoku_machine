@@ -18,11 +18,11 @@ pub fn nav_plugin(app: &mut App) {
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq, States, Display)]
 pub enum NavState {
     #[default]
-    #[strum(to_string = "X")]
+    #[strum(to_string = "🞨")]
     Exit,
-    #[strum(to_string = "<")]
+    #[strum(to_string = "🡠")]
     Back,
-    #[strum(to_string = "||")]
+    #[strum(to_string = "⏸")]
     Pause,
 }
 
@@ -51,18 +51,26 @@ fn nav_setup(mut commands: Commands) {
     let nav_button_icon_bundle = (
         NavButtonIcon,
         Text::new(NavState::default()),
-        TextFont::from_font_size(60.0),
+        TextFont::from_font_size(50.0),
+        ThemedFontWeight::Symbolic,
+        ThemedTextColor,
+        TextLayout::new_with_justify(JustifyText::Center),
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            margin: UiRect::top(Val::Px(4.0)),
+            ..default()
+        },
     );
 
     commands.spawn((
         NavButton,
         Node {
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            padding: UiRect::all(Val::Px(5.0)),
             position_type: PositionType::Absolute,
             left: Val::Px(20.0),
             top: Val::Px(20.0),
+            width: Val::Px(80.0),
+            height: Val::Px(60.0),
             ..default()
         },
         children![nav_button_icon_bundle],

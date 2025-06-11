@@ -65,7 +65,7 @@ fn home_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Com
 
     let button_bundles = HomeMenuButton::iter().map(|home_menu_button| {
         let button_text_bundle = (
-            ThemedFontWeight::Regular,
+            ThemedFontWeight::Bold,
             ThemedTextColor,
             Text::new(home_menu_button.to_string()),
             TextFont::from_font_size(40.0),
