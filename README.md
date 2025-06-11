@@ -11,16 +11,7 @@ game using WebAssembly/WebGPU and make it available at https://mrkjdy.dev.
 
 ## TODO
 
-- CI/CD
-- Implement a SpawnWidget trait for spawning widgets instead of the Spawn trait
-- UI for the classic puzzle
-- Puzzle generators for Knight and Full Kropki
-- UIs for the Knight and Full Kropki puzzles
-- The Continue button
-- The History menu
-- SVG rendering for buttons
-- Make available at https://mrkjdy.dev
-- Additional puzzle types - Hexadoku, Diagonal, etc.
+See [Issues](https://github.com/mrkjdy/sudoku_machine/issues)
 
 ### License Information
 
