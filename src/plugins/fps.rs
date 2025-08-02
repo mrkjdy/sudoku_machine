@@ -57,5 +57,5 @@ fn fps_system(
 
     // Set the new FPS value in the text component
     let mut text = fps_text_query.single_mut().unwrap();
-    text.0 = format!("{:>7.2}", fps);
+    text.0 = format!("{fps:>7.2}");
 }
