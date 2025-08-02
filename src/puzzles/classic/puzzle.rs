@@ -1,3 +1,4 @@
+use indoc::indoc;
 use rand::{
     seq::{IteratorRandom, SliceRandom},
     Rng,
@@ -6,14 +7,16 @@ use rand_seeder::{SipHasher, SipRng};
 use std::fmt::Display;
 
 use crate::{
-    grids::classic::ClassicGrid,
+    puzzles::{CellCoords, CellIndex, CellValue, PuzzleMeta},
     utility::{element_set::ElementSet, priority_queue::PriorityQueue},
 };
+
+use super::grid::ClassicGrid;
 
 #[derive(Clone)]
 pub struct ClassicPuzzle {
     /// The actual Sudoku grid
-    grid: ClassicGrid,
+    pub grid: ClassicGrid,
     /// The remaining numbers that need to be placed for each row
     row_sets: [ElementSet; 9],
     /// The remaining numbers that need to be placed for each column
@@ -24,9 +27,18 @@ pub struct ClassicPuzzle {
     empty_cell_queue: PriorityQueue<ElementSet>,
 }
 
-type CellCoords = (u8, u8, u8);
-type CellIndex = u8;
-type CellValue = Option<u8>;
+impl PuzzleMeta for ClassicPuzzle {
+    fn title() -> &'static str {
+        "Classic Sudoku"
+    }
+
+    fn description() -> &'static str {
+        indoc! {"
+            Fill a 9x9 grid so each row, column, and 3x3 box contains all digits 1-9 without \
+            repetition.
+        "}
+    }
+}
 
 impl Default for ClassicPuzzle {
     fn default() -> Self {
@@ -394,7 +406,7 @@ impl ClassicPuzzle {
     }
 
     /// Creates and sets up a puzzle given some string seed
-    pub fn from_seed(seed: String) -> Self {
+    pub fn from_seed(seed: &str) -> Self {
         let mut puzzle = ClassicPuzzle::new();
 
         let mut rng: SipRng = SipHasher::from(seed).into_rng();

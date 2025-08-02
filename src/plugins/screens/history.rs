@@ -2,11 +2,14 @@ use bevy::prelude::*;
 
 use crate::{despawn_component, plugins::nav::NavState};
 
-use super::MenuState;
+use super::ScreenState;
 
 pub fn history_menu_plugin(app: &mut App) {
-    app.add_systems(OnEnter(MenuState::History), history_menu_setup)
-        .add_systems(OnExit(MenuState::History), despawn_component::<HistoryMenu>);
+    app.add_systems(OnEnter(ScreenState::History), history_menu_setup)
+        .add_systems(
+            OnExit(ScreenState::History),
+            despawn_component::<HistoryMenu>,
+        );
 }
 
 #[derive(Component)]

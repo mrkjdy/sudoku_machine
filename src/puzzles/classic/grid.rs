@@ -1,13 +1,12 @@
 use std::fmt::{Display, Write};
 
-use super::{Grid, GridVec, ToGridVec};
+use crate::puzzles::Grid;
 
-// TODO - derive this automatically?
-impl ToGridVec for ClassicGrid {
-    fn to_grid_vec(&self) -> GridVec {
-        self.clone().0.iter().map(|row| row.to_vec()).collect()
-    }
-}
+pub const NUM_COLS: usize = 9;
+pub const NUM_ROWS: usize = 9;
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ClassicGrid(pub Grid<NUM_COLS, NUM_ROWS>);
 
 pub struct ColIter<'a> {
     grid: &'a ClassicGrid,
@@ -25,7 +24,7 @@ impl<'a> Iterator for ColIter<'a> {
     type Item = &'a Option<u8>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.row >= 9 {
+        if self.row >= NUM_ROWS as u8 {
             return None;
         }
         let val = &self.grid.0[self.row as usize][self.col as usize];

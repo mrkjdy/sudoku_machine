@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use strum_macros::Display;
 
-use crate::{plugins::menu::MenuState, AppState};
+use crate::plugins::screens::ScreenState;
 
 use super::common::theme::{
     node::{ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect},
@@ -88,9 +88,8 @@ fn nav_icon_system(
 fn nav_button_action(
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<NavButton>)>,
     nav_state: Res<State<NavState>>,
-    mut menu_state: ResMut<NextState<MenuState>>,
+    mut screen_state: ResMut<NextState<ScreenState>>,
     mut app_exit_events: EventWriter<AppExit>,
-    mut app_state: ResMut<NextState<AppState>>,
 ) {
     for _ in interaction_query
         .iter()
@@ -98,13 +97,13 @@ fn nav_button_action(
     {
         match *nav_state.get() {
             NavState::Back => {
-                menu_state.set(MenuState::Home);
+                screen_state.set(ScreenState::Home);
             }
             NavState::Exit => {
                 app_exit_events.write(AppExit::Success);
             }
             NavState::Pause => {
-                app_state.set(AppState::Menu);
+                screen_state.set(ScreenState::Home);
             }
         }
     }
