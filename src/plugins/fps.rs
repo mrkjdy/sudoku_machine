@@ -46,6 +46,8 @@ fn fps_system(
         *elapsed = 0.0;
     }
 
-    let mut text = fps_text_query.single_mut().unwrap();
+    let mut text = fps_text_query
+        .single_mut()
+        .expect("Expected exactly one FpsText entity, but found none or multiple.");
     text.0 = format!("{:>7.2}", *last_fps);
 }
