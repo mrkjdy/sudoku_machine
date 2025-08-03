@@ -4681,7 +4681,7 @@ dependencies = [
 
 [[package]]
 name = "sudoku_machine"
-version = "0.1.8"
+version = "0.2.0"
 dependencies = [
  "arboard",
  "bevy",
