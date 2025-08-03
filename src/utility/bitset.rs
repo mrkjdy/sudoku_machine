@@ -58,7 +58,7 @@ impl BitSet16 {
 
     /// Returns an iterator over the numbers in the bitset.
     ///
-    pub fn iter(&self) -> BitSet16Iter {
+    pub fn iter(&self) -> BitSet16Iter<'_> {
         BitSet16Iter { set: self, bit: 0 }
     }
 
