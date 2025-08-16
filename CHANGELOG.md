@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.2.1](https://github.com/mrkjdy/sudoku_machine/compare/v0.2.0...v0.2.1) - 2025-08-16
+
+### Other
+
+- *(deps)* bump actions/download-artifact from 4 to 5 ([#85](https://github.com/mrkjdy/sudoku_machine/pull/85))
+
 ## [0.2.0](https://github.com/mrkjdy/sudoku_machine/compare/v0.1.8...v0.2.0) - 2025-08-03
 
 ### Added
