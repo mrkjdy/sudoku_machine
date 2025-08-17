@@ -190,6 +190,7 @@ jobs:
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v5
+      - run: rustup --version
       - run: rustup toolchain install --profile minimal --target ${{ matrix.platform.target }}
 
       - name: Build
