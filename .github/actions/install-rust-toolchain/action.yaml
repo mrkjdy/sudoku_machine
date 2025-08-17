@@ -1,0 +1,185 @@
+name: "Install Rust Toolchain"
+description: "Install the pinned rust toolchain (from rust-toolchain.toml) using a minimal profile by default, then add optional targets/components. Exports RUSTUP_TOOLCHAIN to the job environment."
+inputs:
+  toolchain:
+    description: "Optional explicit toolchain to install (e.g. '1.88.0' or 'stable'). If empty, resolved via `rustup show active-toolchain` (which reads rust-toolchain.toml)."
+    required: false
+    default: ""
+  profile:
+    description: "rustup profile to use when installing the toolchain (e.g. 'minimal' or 'default')."
+    required: false
+    default: "minimal"
+  targets:
+    description: "Comma-separated list of targets to add (example: 'wasm32-unknown-unknown,x86_64-unknown-linux-gnu')."
+    required: false
+    default: ""
+  components:
+    description: "Comma-separated list of components to add (example: 'clippy,rustfmt')."
+    required: false
+    default: ""
+  force:
+    description: "If 'true', force reinstall of the toolchain with `--force`."
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    # Non-Windows (bash) implementation
+    - name: Ensure rustup present (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! command -v rustup >/dev/null 2>&1; then
+          echo "rustup not found in PATH. Install rustup on the runner or use a runner image that includes rustup."
+          exit 1
+        fi
+
+    - name: Resolve toolchain and export (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -n "${{ inputs.toolchain }}" ]; then
+          TOOLCHAIN="${{ inputs.toolchain }}"
+        else
+          # rustup show active-toolchain will pick up rust-toolchain.toml if present
+          TOOLCHAIN=$(rustup show active-toolchain 2>/dev/null | awk '{print $1}' || true)
+          if [ -z "$TOOLCHAIN" ]; then
+            TOOLCHAIN=stable
+          fi
+        fi
+        echo "Resolved toolchain: $TOOLCHAIN"
+        echo "RUSTUP_TOOLCHAIN=$TOOLCHAIN" >> "$GITHUB_ENV"
+
+    - name: Set rustup profile (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        set -euo pipefail
+        rustup set profile "${{ inputs.profile }}" || true
+
+    - name: Install toolchain (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        set -euo pipefail
+        # TOOLCHAIN variable comes from previous step via GITHUB_ENV; read it
+        TOOLCHAIN="${RUSTUP_TOOLCHAIN:-}"
+        if [ -z "$TOOLCHAIN" ]; then
+          echo "Toolchain unresolved"
+          exit 1
+        fi
+        if [ "${{ inputs.force }}" = "true" ]; then
+          rustup toolchain install --force "$TOOLCHAIN"
+        else
+          rustup toolchain install "$TOOLCHAIN"
+        fi
+
+    - name: Add targets (Unix)
+      if: runner.os != 'Windows' && inputs.targets != ''
+      shell: bash
+      run: |
+        set -euo pipefail
+        TOOLCHAIN="${RUSTUP_TOOLCHAIN:-}"
+        echo "${{ inputs.targets }}" | tr ',' '\n' | while read -r t; do
+          t="$(echo "$t" | xargs)"
+          if [ -n "$t" ]; then
+            rustup target add --toolchain "$TOOLCHAIN" "$t"
+          fi
+        done
+
+    - name: Add components (Unix)
+      if: runner.os != 'Windows' && inputs.components != ''
+      shell: bash
+      run: |
+        set -euo pipefail
+        TOOLCHAIN="${RUSTUP_TOOLCHAIN:-}"
+        echo "${{ inputs.components }}" | tr ',' '\n' | while read -r c; do
+          c="$(echo "$c" | xargs)"
+          if [ -n "$c" ]; then
+            rustup component add --toolchain "$TOOLCHAIN" "$c"
+          fi
+        done
+
+    # Windows (PowerShell) implementation
+    - name: Ensure rustup present (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        if (-not (Get-Command rustup -ErrorAction SilentlyContinue)) {
+          Write-Error "rustup not found in PATH. Install rustup on the runner or use a runner image that includes rustup."
+          exit 1
+        }
+
+    - name: Resolve toolchain and export (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $toolchainInput = "${{ inputs.toolchain }}"
+        if ($toolchainInput -and $toolchainInput.Trim() -ne '') {
+          $TOOLCHAIN = $toolchainInput.Trim()
+        }
+        else {
+          # rustup show active-toolchain reads rust-toolchain.toml when present
+          $out = rustup show active-toolchain 2>$null
+          if ($out) {
+            $TOOLCHAIN = ($out -split '\s+')[0]
+          }
+          else {
+            $TOOLCHAIN = "stable"
+          }
+        }
+        Write-Host "Resolved toolchain: $TOOLCHAIN"
+        Add-Content -Path $env:GITHUB_ENV -Value "RUSTUP_TOOLCHAIN=$TOOLCHAIN"
+
+    - name: Set rustup profile (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        rustup set profile "${{ inputs.profile }}" | Out-Null
+
+    - name: Install toolchain (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $TOOLCHAIN = $env:RUSTUP_TOOLCHAIN
+        if (-not $TOOLCHAIN) { Write-Error "Toolchain unresolved"; exit 1 }
+        if ("${{ inputs.force }}" -eq "true") {
+          rustup toolchain install --force $TOOLCHAIN
+        } else {
+          rustup toolchain install $TOOLCHAIN
+        }
+
+    - name: Add targets (Windows)
+      if: runner.os == 'Windows' && inputs.targets != ''
+      shell: pwsh
+      run: |
+        $TOOLCHAIN = $env:RUSTUP_TOOLCHAIN
+        $targets = "${{ inputs.targets }}" -split ','
+        foreach ($t in $targets) {
+          $t = $t.Trim()
+          if ($t) {
+            rustup target add --toolchain $TOOLCHAIN $t
+          }
+        }
+
+    - name: Add components (Windows)
+      if: runner.os == 'Windows' && inputs.components != ''
+      shell: pwsh
+      run: |
+        $TOOLCHAIN = $env:RUSTUP_TOOLCHAIN
+        $comps = "${{ inputs.components }}" -split ','
+        foreach ($c in $comps) {
+          $c = $c.Trim()
+          if ($c) {
+            rustup component add --toolchain $TOOLCHAIN $c
+          }
+        }
+
+    - name: Show rustup status
+      shell: bash
+      run: |
+        # Try to show status; non-fatal if it fails on Windows callers that used pwsh
+        rustup show || true

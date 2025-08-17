@@ -17,7 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: rustup toolchain install --profile minimal --target wasm32-unknown-unknown
+      - name: Install Rust toolchain
+        uses: ./.github/actions/install-rust-toolchain
+        with:
+          profile: minimal
+          targets: wasm32-unknown-unknown
       - name: install wasm-bindgen-cli
         run: |
           cargo install wasm-bindgen-cli
@@ -91,7 +95,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: rustup toolchain install --profile minimal --target x86_64-unknown-linux-gnu
+      - name: Install Rust toolchain
+        uses: ./.github/actions/install-rust-toolchain
+        with:
+          profile: minimal
+          targets: x86_64-unknown-linux-gnu
       - name: install dependencies
         run: |
           sudo apt-get update
@@ -139,7 +147,11 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
-      - run: rustup toolchain install --profile minimal --target x86_64-pc-windows-msvc
+      - name: Install Rust toolchain
+        uses: ./.github/actions/install-rust-toolchain
+        with:
+          profile: minimal
+          targets: x86_64-pc-windows-msvc
 
       - name: Build
         run: |
@@ -192,7 +204,11 @@ jobs:
     runs-on: ${{ matrix.platform.runner }}
     steps:
       - uses: actions/checkout@v5
-      - run: rustup toolchain install --profile minimal --target ${{ matrix.platform.target }}
+      - name: Install Rust toolchain
+        uses: ./.github/actions/install-rust-toolchain
+        with:
+          profile: minimal
+          targets: ${{ matrix.platform.target }}
 
       - name: Build
         run: |

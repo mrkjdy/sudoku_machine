@@ -20,7 +20,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
-      - run: rustup toolchain install --profile minimal
+      - name: Install Rust toolchain
+        uses: ./.github/actions/install-rust-toolchain
+        with:
+          profile: minimal
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -47,7 +50,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
-      - run: rustup toolchain install --profile minimal
+      - name: Install Rust toolchain
+        uses: ./.github/actions/install-rust-toolchain
+        with:
+          profile: minimal
       - name: Install Dependencies
         run: |
           sudo apt-get update
