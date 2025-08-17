@@ -1,5 +1,4 @@
 [toolchain]
 channel = "1.88.0"
-components = ["rustfmt", "clippy"]
+profile = "default"                  # Includes clippy and rustfmt
 targets = ["wasm32-unknown-unknown"]
-profile = "default"
