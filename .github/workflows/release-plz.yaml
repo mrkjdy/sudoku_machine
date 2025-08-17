@@ -16,12 +16,14 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: ./.github/actions/install-rust-toolchain
+        with:
+          profile: minimal
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -44,12 +46,14 @@ jobs:
       releases: ${{ steps.release-plz-release.outputs.releases }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: ./.github/actions/install-rust-toolchain
+        with:
+          profile: minimal
       - name: Install Dependencies
         run: |
           sudo apt-get update
