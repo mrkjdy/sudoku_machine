@@ -3,7 +3,6 @@ use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter};
 
 use crate::{
-    despawn_component,
     plugins::{
         common::theme::{
             node::{
@@ -11,6 +10,7 @@ use crate::{
             },
             text::{ThemedFontWeight, ThemedTextColor},
         },
+        despawn_component,
         nav::NavState,
     },
     APP_TITLE,

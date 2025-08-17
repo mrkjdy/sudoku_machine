@@ -10,10 +10,11 @@ use crate::{
         },
         screens::PIXELS_PER_CH,
     },
-    puzzles::{CellValue, Row},
+    puzzles::{
+        classic::grid::{ClassicGrid, NUM_COLS},
+        CellValue, Row,
+    },
 };
-
-use super::grid::{ClassicGrid, NUM_COLS};
 
 struct CellBundleOptions {
     cell_value: CellValue,

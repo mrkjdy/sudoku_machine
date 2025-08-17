@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use strum::IntoEnumIterator;
 
 use crate::{
-    despawn_component,
     plugins::{
         common::{
             bundles::{
@@ -19,6 +18,7 @@ use crate::{
                 text::{ThemedFontWeight, ThemedTextColor},
             },
         },
+        despawn_component,
         nav::NavState,
     },
     puzzles::PuzzleType,

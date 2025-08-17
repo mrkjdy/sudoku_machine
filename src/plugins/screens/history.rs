@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{despawn_component, plugins::nav::NavState};
+use crate::plugins::{despawn_component, nav::NavState};
 
 use super::ScreenState;
 

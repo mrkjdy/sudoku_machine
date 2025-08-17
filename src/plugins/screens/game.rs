@@ -1,12 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    despawn_component,
-    plugins::nav::NavState,
-    puzzles::{
-        classic::{bundle::classic_puzzle_bundle, puzzle::ClassicPuzzle},
-        PuzzleType,
-    },
+    plugins::{despawn_component, nav::NavState, puzzles::classic::classic_puzzle_bundle},
+    puzzles::{classic::puzzle::ClassicPuzzle, PuzzleType},
 };
 
 use super::{PuzzleSettings, ScreenState};
