@@ -184,13 +184,14 @@ jobs:
           - job_name: Apple Silicon
             dmg_name: apple-silicon
             target: aarch64-apple-darwin
+            runner: macos-latest
           - job_name: Intel
             dmg_name: intel
             target: x86_64-apple-darwin
-    runs-on: macOS-latest
+            runner: macos-13
+    runs-on: ${{ matrix.platform.runner }}
     steps:
       - uses: actions/checkout@v5
-      - run: rustup --version
       - run: rustup toolchain install --profile minimal --target ${{ matrix.platform.target }}
 
       - name: Build
