@@ -67,15 +67,15 @@ impl<'a> Iterator for BoxIter<'a> {
 }
 
 impl ClassicGrid {
-    pub fn iter_row(&self, row: u8) -> impl Iterator<Item = &Option<u8>> {
+    pub fn iter_row(&self, row: u8) -> impl Iterator<Item = &'_ Option<u8>> {
         self.0[row as usize].iter()
     }
 
-    pub fn iter_col(&self, col: u8) -> ColIter {
+    pub fn iter_col(&self, col: u8) -> ColIter<'_> {
         ColIter::new(self, col)
     }
 
-    pub fn iter_box(&self, box_index: u8) -> BoxIter {
+    pub fn iter_box(&self, box_index: u8) -> BoxIter<'_> {
         BoxIter::new(self, box_index)
     }
 
