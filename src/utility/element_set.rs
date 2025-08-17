@@ -15,7 +15,7 @@ impl Eq for ElementSet {}
 
 impl PartialOrd for ElementSet {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(other.0.len().cmp(&self.0.len()))
+        Some(self.cmp(other))
     }
 }
 
@@ -40,7 +40,7 @@ impl ElementSet {
         Self(self.0.intersection(&other.0))
     }
 
-    pub fn iter(&self) -> BitSet16Iter {
+    pub fn iter(&self) -> BitSet16Iter<'_> {
         self.0.iter()
     }
 

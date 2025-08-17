@@ -72,11 +72,11 @@ impl ClassicGrid {
         self.0[row as usize].iter()
     }
 
-    pub fn iter_col(&self, col: u8) -> ColIter {
+    pub fn iter_col(&self, col: u8) -> ColIter<'_> {
         ColIter::new(self, col)
     }
 
-    pub fn iter_box(&self, box_index: u8) -> BoxIter {
+    pub fn iter_box(&self, box_index: u8) -> BoxIter<'_> {
         BoxIter::new(self, box_index)
     }
 
