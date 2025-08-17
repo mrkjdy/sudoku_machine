@@ -16,7 +16,7 @@ jobs:
     name: Build Wasm
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: rustup toolchain install --target wasm32-unknown-unknown
       - name: install wasm-bindgen-cli
         run: |
@@ -73,7 +73,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/configure-pages@v5
       - uses: actions/download-artifact@v5
         id: download-artifact
@@ -90,7 +90,7 @@ jobs:
     name: Build Linux
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: rustup toolchain install --target x86_64-unknown-linux-gnu
       - name: install dependencies
         run: |
@@ -138,7 +138,7 @@ jobs:
     name: Build Windows
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: rustup toolchain install --target x86_64-pc-windows-msvc
 
       - name: Build
@@ -189,7 +189,7 @@ jobs:
             target: x86_64-apple-darwin
     runs-on: macOS-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: rustup toolchain install --target ${{ matrix.platform.target }}
 
       - name: Build
