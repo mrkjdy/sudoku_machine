@@ -21,7 +21,9 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: ./.github/actions/install-rust-toolchain
+        with:
+          profile: minimal
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -49,7 +51,9 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: ./.github/actions/install-rust-toolchain
+        with:
+          profile: minimal
       - name: Install Dependencies
         run: |
           sudo apt-get update
