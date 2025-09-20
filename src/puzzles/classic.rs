@@ -13,7 +13,7 @@ use crate::{
 #[derive(Clone)]
 pub struct ClassicPuzzle {
     /// The actual Sudoku grid
-    grid: ClassicGrid,
+    pub grid: ClassicGrid,
     /// The remaining numbers that need to be placed for each row
     row_sets: [ElementSet; 9],
     /// The remaining numbers that need to be placed for each column
@@ -24,9 +24,9 @@ pub struct ClassicPuzzle {
     empty_cell_queue: PriorityQueue<ElementSet>,
 }
 
-type CellCoords = (u8, u8, u8);
-type CellIndex = u8;
-type CellValue = Option<u8>;
+pub type CellCoords = (u8, u8, u8);
+pub type CellIndex = u8;
+pub type CellValue = Option<u8>;
 
 impl Default for ClassicPuzzle {
     fn default() -> Self {
@@ -52,19 +52,18 @@ impl ClassicPuzzle {
         row * 9 + col
     }
 
-    /// Calculates and returns the row and column indexes for some "cell index" (one from 0 to 80)
+    /// Calculates and returns the row and column indexes for some "cell index" (0 to 80)
     fn get_row_col(cell_index: CellIndex) -> (u8, u8) {
         (cell_index / 9, cell_index % 9)
     }
 
-    /// Calculates and returns the box index for some "cell index" (one from 0 to 80)
+    /// Calculates and returns the box index for some "cell index" (0 to 80)
     fn get_box_index((row, col): (u8, u8)) -> u8 {
         (row / 3) * 3 + (col / 3)
     }
 
-    /// Calculates and returns the row, column, and box indexes for some "cell index" (one from 0
-    /// to 80)
-    fn get_cell_coords(cell_index: u8) -> CellCoords {
+    /// Calculates and returns the row, column, and box indexes for some "cell index" (0 to 80)
+    pub fn get_cell_coords(cell_index: CellIndex) -> CellCoords {
         let (row, col) = Self::get_row_col(cell_index);
         let box_index = Self::get_box_index((row, col));
         (row, col, box_index)
@@ -151,11 +150,13 @@ impl ClassicPuzzle {
         all_cell_indexes.shuffle(&mut rng);
 
         // Initialize a priority queue to get the next cell with the fewest possibilities
-        self.empty_cell_queue.fill_from_iter_unsafe(
-            all_cell_indexes
-                .iter()
-                .map(|&cell_index| (cell_index as usize, ElementSet::from(1..9))),
-        );
+        self.empty_cell_queue
+            .fill_from_iter_unsafe(all_cell_indexes.iter().map(|&cell_index| {
+                (
+                    cell_index as usize,
+                    ElementSet::from(1..=9), // Represents all possible values for the cell
+                )
+            }));
 
         // Stack of cells that have already been filled and their unattempted possibilities
         let mut filled_cell_pairs: Vec<(CellIndex, ElementSet)> = Vec::new();
@@ -221,7 +222,7 @@ impl ClassicPuzzle {
         }
     }
 
-    fn find_solutions_recursive(mut puzzle: ClassicPuzzle) -> Vec<ClassicGrid> {
+    pub fn find_solutions_recursive(mut puzzle: ClassicPuzzle) -> Vec<ClassicGrid> {
         let mut solutions: Vec<ClassicGrid> = Vec::new();
 
         // If the queue is empty, the puzzle is solved
@@ -264,7 +265,7 @@ impl ClassicPuzzle {
     }
 
     // FIXME
-    fn _find_solutions_iterative(mut puzzle: ClassicPuzzle) -> Vec<ClassicGrid> {
+    pub fn find_solutions_iterative(mut puzzle: ClassicPuzzle) -> Vec<ClassicGrid> {
         let mut solutions = Vec::new();
 
         // If the queue is empty, the puzzle is solved

@@ -62,5 +62,5 @@ strip = "debuginfo"
 
 
 [[bench]]
-name = "classic"
+name = "classic_bench"
 harness = false
