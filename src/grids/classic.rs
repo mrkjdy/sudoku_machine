@@ -10,6 +10,7 @@ pub struct ColIter<'a> {
 }
 
 impl<'a> ColIter<'a> {
+    /// Create a ColIter for iterating over a column of cells in the grid.
     pub fn new(grid: &'a ClassicGrid, col: u8) -> Self {
         Self { grid, row: 0, col }
     }
@@ -18,6 +19,7 @@ impl<'a> ColIter<'a> {
 impl<'a> Iterator for ColIter<'a> {
     type Item = &'a Option<u8>;
 
+    /// Iterate over the cells in a column of the grid.
     fn next(&mut self) -> Option<Self::Item> {
         if self.row >= 9 {
             return None;
@@ -36,6 +38,7 @@ pub struct BoxIter<'a> {
 }
 
 impl<'a> BoxIter<'a> {
+    /// Create a BoxIter for iterating over a box of cells in the grid.
     pub fn new(grid: &'a ClassicGrid, box_index: u8) -> Self {
         Self {
             grid,
@@ -49,6 +52,7 @@ impl<'a> BoxIter<'a> {
 impl<'a> Iterator for BoxIter<'a> {
     type Item = &'a Option<u8>;
 
+    /// Iterate over the cells in a box of the grid.
     fn next(&mut self) -> Option<Self::Item> {
         if self.index >= 9 {
             return None;
@@ -62,28 +66,34 @@ impl<'a> Iterator for BoxIter<'a> {
 }
 
 impl ClassicGrid {
+    /// Iterate over a row of cells in the grid.
     pub fn iter_row(&self, row: u8) -> impl Iterator<Item = &Option<u8>> {
         self.0[row as usize].iter()
     }
 
+    /// Iterate over a column of cells in the grid.
     pub fn iter_col(&self, col: u8) -> ColIter<'_> {
         ColIter::new(self, col)
     }
 
+    /// Iterate over a box of cells in the grid.
     pub fn iter_box(&self, box_index: u8) -> BoxIter<'_> {
         BoxIter::new(self, box_index)
     }
 
+    /// Get the value of a cell in the grid.
     pub fn get(&self, (row, col): (u8, u8)) -> Option<u8> {
         self.0[row as usize][col as usize]
     }
 
+    /// Set the value of a cell in the grid.
     pub fn set(&mut self, (row, col): (u8, u8), val: Option<u8>) {
         self.0[row as usize][col as usize] = val;
     }
 }
 
 impl Display for ClassicGrid {
+    /// Display the grid in a human-readable format.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (row_index, row_cells) in self.0.iter().enumerate() {
             for (col_index, cell) in row_cells.iter().enumerate() {
@@ -109,6 +119,7 @@ impl Display for ClassicGrid {
 }
 
 impl From<&str> for ClassicGrid {
+    /// Create a ClassicGrid from a string representation.
     fn from(s: &str) -> Self {
         let mut grid = ClassicGrid::default();
 
@@ -130,12 +141,14 @@ impl From<&str> for ClassicGrid {
 }
 
 impl From<[[u8; 9]; 9]> for ClassicGrid {
+    /// Create a ClassicGrid from a 2D array of u8 values.
     fn from(nums: [[u8; 9]; 9]) -> Self {
         ClassicGrid(nums.map(|row| row.map(|num| if num == 0 { None } else { Some(num) })))
     }
 }
 
 impl PartialEq for ClassicGrid {
+    /// Check if two ClassicGrids are equal.
     fn eq(&self, other: &Self) -> bool {
         self.0.eq(&other.0)
     }
