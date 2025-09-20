@@ -4,8 +4,8 @@ use bevy::{prelude::*, window::PresentMode};
 #[cfg(debug_assertions)]
 use sudoku_machine::plugins::fps;
 use sudoku_machine::{
-    plugins::{common::theme, game, menu, nav},
-    AppState, PuzzleSettings, APP_TITLE,
+    plugins::{common::theme, nav, screens},
+    APP_TITLE,
 };
 
 fn main() {
@@ -26,13 +26,10 @@ fn main() {
             }),
             ..default()
         }))
-        .init_state::<AppState>()
-        .init_resource::<PuzzleSettings>()
         .add_plugins((
             theme::theme_plugin,
-            menu::menu_plugin,
+            screens::screen_plugin,
             nav::nav_plugin,
-            game::game_plugin,
             #[cfg(debug_assertions)]
             fps::fps_plugin,
         ))

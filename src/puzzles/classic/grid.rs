@@ -1,7 +1,12 @@
 use std::fmt::{Display, Write};
 
+use crate::puzzles::Grid;
+
+pub const NUM_COLS: usize = 9;
+pub const NUM_ROWS: usize = 9;
+
 #[derive(Clone, Copy, Debug, Default)]
-pub struct ClassicGrid([[Option<u8>; 9]; 9]);
+pub struct ClassicGrid(pub Grid<NUM_COLS, NUM_ROWS>);
 
 pub struct ColIter<'a> {
     grid: &'a ClassicGrid,
@@ -19,7 +24,7 @@ impl<'a> Iterator for ColIter<'a> {
     type Item = &'a Option<u8>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.row >= 9 {
+        if self.row >= NUM_ROWS as u8 {
             return None;
         }
         let val = &self.grid.0[self.row as usize][self.col as usize];
@@ -62,7 +67,7 @@ impl<'a> Iterator for BoxIter<'a> {
 }
 
 impl ClassicGrid {
-    pub fn iter_row(&self, row: u8) -> impl Iterator<Item = &Option<u8>> {
+    pub fn iter_row(&self, row: u8) -> impl Iterator<Item = &'_ Option<u8>> {
         self.0[row as usize].iter()
     }
 
