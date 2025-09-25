@@ -56,6 +56,7 @@ pub struct TextInputBundleOptions {
     pub text_node: Node,
 }
 
+#[must_use]
 pub fn text_input_bundle(options: TextInputBundleOptions) -> impl Bundle {
     let TextInputBundleOptions {
         placeholder_text,
@@ -118,7 +119,7 @@ fn text_input_focus_system(
             // Show the placeholder if the text input is empty
             if text_input_data.is_empty {
                 let mut text = text_query.get_mut(container_children[0]).unwrap();
-                text.0 = text_input_data.placeholder_text.clone();
+                text.0.clone_from(&text_input_data.placeholder_text);
             }
             // Hide the cursor
             let mut text_cursor_visibility =
@@ -134,7 +135,7 @@ fn text_input_focus_system(
             // Hide the placeholder if the text input is empty
             if text_input_data.is_empty {
                 let mut text = text_query.get_mut(container_children[0]).unwrap();
-                text.0 = "".into();
+                text.0 = String::new();
             }
             // Show the cursor
             let mut text_cursor_visibility =
@@ -154,7 +155,7 @@ fn text_input_cursor_blink_system(
 ) {
     if blink_timer.0.tick(time.delta()).just_finished() {
         // Toggle the cursors color alpha
-        for mut text_cursor_background_color in text_cursor_query.iter_mut() {
+        for mut text_cursor_background_color in &mut text_cursor_query {
             let color = &mut text_cursor_background_color.0;
             let new_alpha = if color.alpha() >= 1.0 { 0.0 } else { 1.0 };
             color.set_alpha(new_alpha);
@@ -215,20 +216,18 @@ fn typing_system(
                 text_input_value.pop();
                 is_empty = text_input_value.is_empty();
             }
-            Key::Character(input) if keys.any_pressed(control_keys) => {
-                match input.as_str() {
-                    "c" => {
-                        clipboard_resource.copy(text_input_value.clone());
-                    }
-                    "v" => {
-                        #[cfg(not(target_family = "wasm"))]
-                        clipboard_resource.native_paste(text_input_value);
-                        #[cfg(target_family = "wasm")]
-                        clipboard_resource.wasm_paste(&mut commands, text_entity);
-                    }
-                    _ => {}
-                };
-            }
+            Key::Character(input) if keys.any_pressed(control_keys) => match input.as_str() {
+                "c" => {
+                    clipboard_resource.copy(text_input_value.clone());
+                }
+                "v" => {
+                    #[cfg(not(target_family = "wasm"))]
+                    clipboard_resource.native_paste(text_input_value);
+                    #[cfg(target_family = "wasm")]
+                    clipboard_resource.wasm_paste(&mut commands, text_entity);
+                }
+                _ => {}
+            },
             Key::Character(input) => {
                 text_input_value.push_str(input);
             }
@@ -245,7 +244,7 @@ fn typing_system(
                 clipboard_resource.wasm_paste(&mut commands, text_entity);
             }
             _ => {}
-        };
+        }
 
         // Finally, update the is_empty flag for the text input
         text_input_data.is_empty = is_empty;

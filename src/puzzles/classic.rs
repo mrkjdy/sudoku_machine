@@ -1,3 +1,4 @@
+use arrayvec::ArrayVec;
 use rand::{
     seq::{IteratorRandom, SliceRandom},
     Rng,
@@ -7,13 +8,18 @@ use std::fmt::Display;
 
 use crate::{
     grids::classic::ClassicGrid,
-    utility::{element_set::ElementSet, priority_queue::PriorityQueue},
+    utility::{element_set::ElementSet, priority_queue::ArrayPriorityQueue},
 };
+
+/// The total number of cells in a classic 9x9 Sudoku board.
+const BOARD_SIZE: usize = 9 * 9;
+/// The number of cells in a "group" (row, column, and box) without repeats.
+const GROUP_SIZE: usize = 9 + 8 + 4;
 
 #[derive(Clone)]
 pub struct ClassicPuzzle {
     /// The actual Sudoku grid
-    pub grid: ClassicGrid,
+    grid: ClassicGrid,
     /// The remaining numbers that need to be placed for each row
     row_sets: [ElementSet; 9],
     /// The remaining numbers that need to be placed for each column
@@ -21,7 +27,7 @@ pub struct ClassicPuzzle {
     /// The remaining numbers that need to be placed for each 3x3 box
     box_sets: [ElementSet; 9],
     /// A priority queue for getting the next cell with the fewest possibilities
-    empty_cell_queue: PriorityQueue<ElementSet>,
+    empty_cell_queue: ArrayPriorityQueue<ElementSet, BOARD_SIZE>,
 }
 
 pub type CellCoords = (u8, u8, u8);
@@ -36,18 +42,20 @@ impl Default for ClassicPuzzle {
 
 impl ClassicPuzzle {
     /// Creates a new, blank, classic 9x9 Sudoku board
+    #[must_use]
     pub fn new() -> Self {
         Self {
             grid: ClassicGrid::default(),
             row_sets: std::array::from_fn(|_| ElementSet::CLASSIC),
             col_sets: std::array::from_fn(|_| ElementSet::CLASSIC),
             box_sets: std::array::from_fn(|_| ElementSet::CLASSIC),
-            empty_cell_queue: PriorityQueue::from_iter_unsafe(
-                (0..81).map(|k| (k, ElementSet::CLASSIC)),
+            empty_cell_queue: ArrayPriorityQueue::from_iter_unsafe(
+                (0..BOARD_SIZE).map(|k| (k, ElementSet::CLASSIC)),
             ),
         }
     }
 
+    /// Calculates and returns the "cell index" for some row and column indexes (0 to 8)
     fn get_cell_index((row, col): (u8, u8)) -> CellIndex {
         row * 9 + col
     }
@@ -63,6 +71,7 @@ impl ClassicPuzzle {
     }
 
     /// Calculates and returns the row, column, and box indexes for some "cell index" (0 to 80)
+    #[must_use]
     pub fn get_cell_coords(cell_index: CellIndex) -> CellCoords {
         let (row, col) = Self::get_row_col(cell_index);
         let box_index = Self::get_box_index((row, col));
@@ -71,6 +80,7 @@ impl ClassicPuzzle {
 
     /// Sets a cell in the grid and removes the value from the corresponding sets
     pub fn set(&mut self, (row, col, box_index): CellCoords, val: u8) {
+        debug_assert_eq!(box_index, Self::get_box_index((row, col)));
         // Update the sets
         self.row_sets[row as usize].remove(val);
         self.col_sets[col as usize].remove(val);
@@ -81,8 +91,9 @@ impl ClassicPuzzle {
 
     /// Clears a cell in the grid and adds the value to the corresponding sets
     pub fn delete(&mut self, (row, col, box_index): CellCoords) {
+        debug_assert_eq!(box_index, Self::get_box_index((row, col)));
         // Get the current value
-        if let Some(value) = self.grid.get((row, col)) {
+        if let Some(value) = self.grid.get_by_row_col((row, col)) {
             // Update the sets
             self.row_sets[row as usize].insert(value);
             self.col_sets[col as usize].insert(value);
@@ -92,61 +103,141 @@ impl ClassicPuzzle {
         }
     }
 
+    /// Gets the "element set" for a given cell. An "element set" is a set of all possible values
+    /// that can be placed in a cell, based on the empty cells in the "group" (row, column, or box).
     fn get_element_set(&self, (row, col, box_index): CellCoords) -> ElementSet {
         self.row_sets[row as usize]
             .intersection(&self.col_sets[col as usize])
             .intersection(&self.box_sets[box_index as usize])
     }
 
-    /// Gets all of the cell indexes and values in a row, column, and box.
-    fn get_group_cells(
-        &self,
-        (cell_row, cell_col, cell_box): CellCoords,
-    ) -> Vec<(CellIndex, CellValue)> {
-        let mut cells = Vec::<(CellIndex, CellValue)>::with_capacity(21);
-
-        // Add cell indexes from the row
-        for (col, &val) in self.grid.iter_row(cell_row).enumerate() {
-            let cell_index = cell_row * 9 + col as u8;
-            cells.push((cell_index, val));
-        }
-
-        // Add cells indexes from the col
-        for (row, &val) in self.grid.iter_col(cell_col).enumerate() {
-            let cell_index = (row * 9) as u8 + cell_col;
-            if row != cell_row as usize {
-                cells.push((cell_index, val));
-            }
-        }
-
-        // Add cell indexes from the 3x3 box
-        let tl_box_row = (cell_box / 3) * 3;
-        let tl_box_col = (cell_box % 3) * 3;
-        for (box_offset, &val) in self.grid.iter_box(cell_box).enumerate() {
-            let row = tl_box_row + (box_offset / 3) as u8;
-            let col = tl_box_col + (box_offset % 3) as u8;
-            let cell_index = Self::get_cell_index((row, col));
-            if (row != cell_row) && (col != cell_col) {
-                cells.push((cell_index, val));
-            }
-        }
-
-        cells
-    }
-
-    fn get_empty_group_cell_indexes(&self, cell_coords: CellCoords) -> Vec<CellIndex> {
-        self.get_group_cells(cell_coords)
-            .iter()
-            .copied()
-            .filter_map(|(ci, cv)| if cv.is_none() { Some(ci) } else { None })
+    /// Returns a vector of pairs (cell index, value) for all filled cells in the grid.
+    fn get_all_filled_cell_pairs(&self) -> Vec<(CellIndex, u8)> {
+        self.grid
+            .iter_all()
+            .enumerate()
+            .filter_map(|(i, &val)| val.map(|v| (i as u8, v)))
             .collect()
     }
 
-    pub fn fill_from_rng<T: Rng>(&mut self, mut rng: &mut T) {
-        // List of cells used to initialize unfilled cell heap
-        let mut all_cell_indexes: Vec<CellIndex> = (0..81).collect();
+    // Collect empty neighbors in the same row, column, and box as the given coordinates
+    fn collect_empty_neighbors_for(&self, coords: CellCoords) -> ArrayVec<CellIndex, GROUP_SIZE> {
+        let (cell_row, cell_col, cell_box) = coords;
+        let mut out: ArrayVec<CellIndex, GROUP_SIZE> = ArrayVec::new();
 
-        // Shuffle the cells so that
+        // Collect empty neighbors in the same row
+        for col in 0..9 {
+            if self.grid.get_by_row_col((cell_row, col)).is_none() {
+                out.push(Self::get_cell_index((cell_row, col)));
+            }
+        }
+
+        // Collect empty neighbors in the same column
+        for row in 0..9 {
+            if row != cell_row && self.grid.get_by_row_col((row, cell_col)).is_none() {
+                out.push(Self::get_cell_index((row, cell_col)));
+            }
+        }
+
+        // Collect empty neighbors in the same box
+        let tl_box_row = (cell_box / 3) * 3;
+        let tl_box_col = (cell_box % 3) * 3;
+        for off in 0..9u8 {
+            let row = tl_box_row + (off / 3);
+            let col = tl_box_col + (off % 3);
+            if row != cell_row && col != cell_col && self.grid.get_by_row_col((row, col)).is_none()
+            {
+                out.push(Self::get_cell_index((row, col)));
+            }
+        }
+        out
+    }
+
+    /// Applies `num` to `coords`' neighbors:
+    /// - Returns true if an immediate dead-end is detected (some neighbor becomes empty).
+    /// - Otherwise, applies updates to neighbors that actually lose `num` and records undo entries.
+    fn propagate_choice(
+        &mut self,
+        coords: CellCoords,
+        val: u8,
+        undo: &mut ArrayVec<(CellIndex, ElementSet), GROUP_SIZE>,
+    ) -> bool {
+        // Collect neighbors once
+        let neighbors = self.collect_empty_neighbors_for(coords);
+        let current_index = Self::get_cell_index((coords.0, coords.1));
+
+        // First pass (single pass actually): detect immediate contradiction and gather updates
+        let mut to_update: ArrayVec<(CellIndex, ElementSet), GROUP_SIZE> = ArrayVec::new();
+
+        // for &ci in neighbors.iter() {
+        //     if ci != current_index && self.grid.get_by_row_col(Self::get_row_col(ci)).is_none() {
+        //         debug_assert!(
+        //             self.empty_cell_queue
+        //                 .get_priority_unsafe(ci as usize)
+        //                 .is_some(),
+        //             "Queue missing empty neighbor {}",
+        //             ci
+        //         );
+        //     }
+        // }
+
+        // Attempt the value from the neighbor's possibilities
+        for &ci in &neighbors {
+            // Skip the current cell
+            if ci == current_index {
+                continue;
+            }
+
+            // Get the previous set of possible values for the empty neighbor
+            let &old_set = self
+                .empty_cell_queue
+                .get_priority_unsafe(ci as usize)
+                .unwrap();
+
+            // Skip if the value is already excluded from the neighbor's possibilities
+            if !old_set.has(val) {
+                continue;
+            }
+
+            // If this neighbor only had `num`, removing it would make it empty => dead end
+            if old_set.len() == 1 {
+                return true;
+            }
+
+            // Otherwise, we plan to remove `num` and record the value for undo
+            to_update.push((ci, old_set));
+        }
+
+        // Safe to apply updates now. Record undo entries and update the queue.
+        undo.clear();
+        for &(ci, old_set) in &to_update {
+            let mut new_set = old_set;
+            new_set.remove(val);
+            undo.push((ci, old_set));
+            self.empty_cell_queue.insert_unsafe((ci as usize, new_set));
+        }
+
+        // Return false to indicate that the a dead end was not found
+        false
+    }
+
+    /// Fills the board with random values, ensuring that each row, column, and box contains all
+    /// numbers from 1 to 9.
+    pub fn fill_from_rng<T: Rng>(&mut self, mut rng: &mut T) {
+        #[derive(Clone)]
+        struct GenFrame {
+            cell_index: CellIndex,
+            possibilities: ElementSet, // remaining values for this cell (untried)
+            undo: ArrayVec<(CellIndex, ElementSet), GROUP_SIZE>, // (neighbor_index, old_set) for changed neighbors
+        }
+
+        // List of cells used to initialize unfilled cell heap
+        let mut all_cell_indexes: ArrayVec<CellIndex, BOARD_SIZE> = ArrayVec::new();
+        for i in 0..BOARD_SIZE {
+            all_cell_indexes.push(i as u8);
+        }
+
+        // Shuffle the cells so that they are randomly ordered
         all_cell_indexes.shuffle(&mut rng);
 
         // Initialize a priority queue to get the next cell with the fewest possibilities
@@ -158,8 +249,8 @@ impl ClassicPuzzle {
                 )
             }));
 
-        // Stack of cells that have already been filled and their unattempted possibilities
-        let mut filled_cell_pairs: Vec<(CellIndex, ElementSet)> = Vec::new();
+        // Stack of cells that have already been filled (with their remaining possibilities and undo)
+        let mut stack: ArrayVec<GenFrame, BOARD_SIZE> = ArrayVec::new();
 
         // Fill the board
         while let Some(cell) = self.empty_cell_queue.pop() {
@@ -174,227 +265,451 @@ impl ClassicPuzzle {
                 // Place the number in the cell
                 self.set(current_cell_coords, num);
 
-                // Update the possibilities left in the heap for each of the empty cells
-                // related to the current cell.
-                for cell_index in self.get_empty_group_cell_indexes(current_cell_coords) {
-                    let mut element_set = *self
-                        .empty_cell_queue
-                        .get_priority_unsafe(cell_index as usize)
-                        .unwrap();
-                    element_set.remove(num);
+                // Update the possibilities left in the heap for each of the empty cells neighboring
+                // the current cell, recording undo info only for neighbors that change.
+                let mut undo: ArrayVec<(CellIndex, ElementSet), GROUP_SIZE> = ArrayVec::new();
+                let dead_end = self.propagate_choice(current_cell_coords, num, &mut undo);
+
+                if dead_end {
+                    // No neighbor updates were applied; just revert the cell and try next number
+                    self.delete(current_cell_coords);
+                    // IMPORTANT: reinsert the current (now-empty) cell with its remaining possibilities
                     self.empty_cell_queue
-                        .insert_unsafe((cell_index as usize, element_set));
+                        .insert_unsafe((current_cell_index as usize, current_possibilities));
+                    continue;
                 }
 
-                // Add this cell to the stack of filled cells
-                filled_cell_pairs.push((current_cell_index, current_possibilities));
+                // Push this decision frame onto the stack
+                stack.push(GenFrame {
+                    cell_index: current_cell_index,
+                    possibilities: current_possibilities,
+                    undo,
+                });
             } else {
-                // Get the last filled cell
-                let (previous_cell, previous_cell_possibilities) = filled_cell_pairs.pop().unwrap();
+                // Dead-end for the current cell; backtrack to the last filled cell (if any)
+                let GenFrame {
+                    cell_index: previous_cell,
+                    possibilities: previous_cell_possibilities,
+                    undo,
+                } = stack.pop().unwrap();
+
                 let previous_cell_coords = Self::get_cell_coords(previous_cell);
 
-                // Find the cells which may have had their possibilities changed by the last filled
-                // cell.
-                let dirty_cell_indexes = self.get_empty_group_cell_indexes(previous_cell_coords);
-
-                // Remove the filled number from the board. Need to do this now so that the
-                // possibilities for cells being reset are accurate.
+                // Remove the filled number from the board first so restored sets are valid
                 self.delete(previous_cell_coords);
 
-                // Reset the possibilities for the current cell.
+                // Restore the possibilities for the neighbors we changed when we set the previous cell
+                for &(ci, old_set) in undo.iter().rev() {
+                    self.empty_cell_queue.insert_unsafe((ci as usize, old_set));
+                }
+
+                // Reset the possibilities for the current cell (it stays empty)
                 let current_cell_possibilities = self.get_element_set(current_cell_coords);
                 self.empty_cell_queue
                     .insert_unsafe((current_cell_index as usize, current_cell_possibilities));
 
-                // Reset the possibilities for the dirty cells related to the last filled cell.
-                for cell_index in dirty_cell_indexes {
-                    let cell_coords = Self::get_cell_coords(cell_index);
-                    let possibilities = self.get_element_set(cell_coords);
-                    self.empty_cell_queue
-                        .insert_unsafe((cell_index as usize, possibilities));
-                }
-
-                // Add the last filled cell back to the queue so that a different possibility can
-                // be tried.
+                // Add the last filled cell back to the queue so that a different possibility can be tried
                 self.empty_cell_queue
                     .insert_unsafe((previous_cell as usize, previous_cell_possibilities));
             }
         }
     }
 
-    pub fn find_solutions_recursive(mut puzzle: ClassicPuzzle) -> Vec<ClassicGrid> {
-        let mut solutions: Vec<ClassicGrid> = Vec::new();
-
-        // If the queue is empty, the puzzle is solved
-        if puzzle.empty_cell_queue.is_empty() {
-            solutions.push(puzzle.grid);
-            return solutions;
-        }
-
-        // Get the next cell to fill
-        let (cell_index, cell_possibilities) = puzzle.empty_cell_queue.pop().unwrap();
-        let cell_coords = Self::get_cell_coords(cell_index as u8);
-
-        // Get the cell indexes for the empty cells related to the current cell
-        let empty_cell_indexes = puzzle.get_empty_group_cell_indexes(cell_coords);
-
-        // Try each possibility
-        for num in cell_possibilities.iter() {
-            puzzle.set(cell_coords, num);
-
-            // Update the possibilities left in the queue for each of these related cells.
-            for ci in empty_cell_indexes
-                .iter()
-                .cloned()
-                .filter(|&ci| ci as usize != cell_index)
-            {
-                let element_set = puzzle.get_element_set(Self::get_cell_coords(ci));
-                puzzle
-                    .empty_cell_queue
-                    .insert_unsafe((ci as usize, element_set));
+    /// Returns the candidate values for `coords` ordered by LCV (least-constraining first).
+    /// The current cell is skipped. Neighbor sets are prefetched once. Short circuits when there
+    /// are 2 or fewer candidates.
+    fn order_values_lcv(&self, coords: CellCoords, candidates: ElementSet) -> ArrayVec<u8, 9> {
+        // Fast path: tiny domains don't benefit from LCV sorting
+        if candidates.len() <= 2 {
+            let mut out: ArrayVec<u8, 9> = ArrayVec::new();
+            for v in &candidates {
+                out.push(v);
             }
-
-            // Recurse
-            solutions.append(&mut Self::find_solutions_recursive(puzzle.clone()));
-
-            // Need to clear the cell to update the sets
-            puzzle.delete(cell_coords);
+            // Deterministic order
+            out.sort_unstable();
+            return out;
         }
 
-        solutions
+        // Collect the empty neighbors once and prefetch their ElementSets
+        let neighbors = self.collect_empty_neighbors_for(coords);
+        let current_index = Self::get_cell_index((coords.0, coords.1));
+
+        let mut neigh_sets: ArrayVec<ElementSet, GROUP_SIZE> = ArrayVec::new();
+        let mut neigh_idx: ArrayVec<CellIndex, GROUP_SIZE> = ArrayVec::new();
+
+        for &ci in &neighbors {
+            if ci == current_index {
+                continue; // popped MRV cell isn't in the queue
+            }
+            if let Some(es) = self.empty_cell_queue.get_priority_unsafe(ci as usize) {
+                neigh_idx.push(ci);
+                neigh_sets.push(*es);
+            }
+        }
+
+        // Score each candidate by how many neighbors would lose this value
+        let mut scored: ArrayVec<(u8, u8), 9> = ArrayVec::new();
+        for val in &candidates {
+            let mut score: u8 = 0;
+            for es in &neigh_sets {
+                if es.has(val) {
+                    score += 1;
+                }
+            }
+            scored.push((val, score));
+        }
+
+        // Least-constraining first; tie-breaker by value for determinism
+        scored.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)));
+
+        let mut out: ArrayVec<u8, 9> = ArrayVec::new();
+        for (v, _) in scored {
+            out.push(v);
+        }
+        out
     }
 
-    // FIXME
-    pub fn find_solutions_iterative(mut puzzle: ClassicPuzzle) -> Vec<ClassicGrid> {
-        let mut solutions = Vec::new();
+    /// Visit all solutions recursively. Stops when the passed function returns false or all
+    /// solutions have been visited.
+    pub fn visit_solutions_recursive<F>(mut puzzle: ClassicPuzzle, mut visit: F)
+    where
+        F: FnMut(&ClassicGrid) -> bool,
+    {
+        fn dfs<F>(puzzle: &mut ClassicPuzzle, visit: &mut F) -> bool
+        where
+            F: FnMut(&ClassicGrid) -> bool,
+        {
+            // If solved, yield the solution and decide whether to continue
+            if puzzle.empty_cell_queue.is_empty() {
+                return visit(&puzzle.grid);
+            }
 
-        // If the queue is empty, the puzzle is solved
-        if puzzle.empty_cell_queue.is_empty() {
-            println!("Puzzle is empty! Returning the current grid!");
-            solutions.push(puzzle.grid);
-            return solutions;
+            // Choose MRV cell
+            let (cell_index, cell_possibilities) = puzzle.empty_cell_queue.pop().unwrap();
+            let cell_coords = ClassicPuzzle::get_cell_coords(cell_index as u8);
+
+            // Undo log for changed neighbors
+            let mut undo: ArrayVec<(CellIndex, ElementSet), GROUP_SIZE> = ArrayVec::new();
+
+            // LCV ordering for this MRV cell
+            let ordered_vals = puzzle.order_values_lcv(cell_coords, cell_possibilities);
+
+            // Try each value in LCV order
+            for &num in &ordered_vals {
+                // Set current cell
+                puzzle.set(cell_coords, num);
+
+                // Apply choice to neighbors (or detect contradiction early)
+                let dead_end = puzzle.propagate_choice(cell_coords, num, &mut undo);
+
+                let mut keep_going = true;
+                if !dead_end {
+                    // Recurse or yield
+                    if puzzle.empty_cell_queue.is_empty() {
+                        keep_going = visit(&puzzle.grid);
+                    } else {
+                        keep_going = dfs(puzzle, visit);
+                    }
+
+                    // Backtrack if necessary
+                    for &(ci, old_set) in undo.iter().rev() {
+                        puzzle
+                            .empty_cell_queue
+                            .insert_unsafe((ci as usize, old_set));
+                    }
+                }
+
+                // Restore state and continue/stop
+                puzzle.delete(cell_coords);
+
+                if !keep_going {
+                    // Reinset current cell before unwinding
+                    let es = puzzle.get_element_set(cell_coords);
+                    puzzle.empty_cell_queue.insert_unsafe((cell_index, es));
+                    return false;
+                }
+            }
+
+            // Reinsert the MRV cell (recomputed) on the way back up
+            let es = puzzle.get_element_set(cell_coords);
+            puzzle.empty_cell_queue.insert_unsafe((cell_index, es));
+            true
         }
 
-        let mut stack = Vec::new();
+        dfs(&mut puzzle, &mut visit);
+    }
 
-        // Initialize the stack with the first cell
-        stack.push(puzzle.empty_cell_queue.pop().unwrap());
+    /// Find all solutions recursively.
+    #[must_use]
+    pub fn find_solutions_recursive(puzzle: ClassicPuzzle) -> Vec<ClassicGrid> {
+        let mut sols = Vec::new();
+        Self::visit_solutions_recursive(puzzle, |grid| {
+            sols.push(*grid);
+            true
+        });
+        sols
+    }
 
-        while let Some((current_cell_index, mut current_cell_possibilities)) = stack.pop() {
-            if current_cell_possibilities.is_empty() {
-                continue;
-            }
+    /// Count all solutions recursively.
+    #[must_use]
+    pub fn count_solutions_recursive(puzzle: ClassicPuzzle) -> usize {
+        let mut count = 0;
+        Self::visit_solutions_recursive(puzzle, |_| {
+            count += 1;
+            true
+        });
+        count
+    }
 
-            // Try the next possibility
-            let num = current_cell_possibilities.pop().unwrap();
-            let current_cell_coords = Self::get_cell_coords(current_cell_index as u8);
+    /// Find solutions up to a maximum count recursively.
+    #[must_use]
+    pub fn find_solutions_bounded_recursive(
+        puzzle: ClassicPuzzle,
+        max_count: usize,
+    ) -> Vec<ClassicGrid> {
+        let mut sols = Vec::new();
+        if max_count == 0 {
+            return sols;
+        }
+        let mut count = 0;
+        Self::visit_solutions_recursive(puzzle, |grid| {
+            sols.push(*grid);
+            count += 1;
+            count < max_count
+        });
+        sols
+    }
 
-            // Set the cell
-            puzzle.set(current_cell_coords, num);
+    /// Count solutions up to a maximum count recursively.
+    #[must_use]
+    pub fn count_solutions_bounded_recursive(puzzle: ClassicPuzzle, max_count: usize) -> usize {
+        let mut count = 0;
+        if max_count == 0 {
+            return count;
+        }
+        Self::visit_solutions_recursive(puzzle, |_| {
+            count += 1;
+            count < max_count
+        });
+        count
+    }
 
-            // If there are no more empty cells, then the puzzle is solved
-            if puzzle.empty_cell_queue.is_empty() {
-                solutions.push(puzzle.grid);
-                // Clear the cell and add it back to the queue
-                puzzle.delete(current_cell_coords);
-                // Ok to reuse current_cell_possibilities, because it should be empty
-                current_cell_possibilities.insert(num);
-                puzzle
-                    .empty_cell_queue
-                    .insert_unsafe((current_cell_index, current_cell_possibilities));
-                continue;
-            }
+    /// Visit solutions iteratively. Stops when the passed function returns false or when all
+    /// solutions have been visited.
+    pub fn visit_solutions_iterative<F>(mut puzzle: ClassicPuzzle, mut visit: F)
+    where
+        F: FnMut(&ClassicGrid) -> bool,
+    {
+        #[derive(Clone)]
+        struct Frame {
+            cell_index: CellIndex,
+            order: ArrayVec<u8, 9>, // LCV-order values to try
+            next_ix: u8,            // next index into `order` to try
+            chosen: CellValue,      // currently chosen value (if any)
+            undo: ArrayVec<(CellIndex, ElementSet), GROUP_SIZE>,
+        }
 
-            let empty_cell_indexes = puzzle.get_empty_group_cell_indexes(current_cell_coords);
+        // Already solved
+        if puzzle.empty_cell_queue.is_empty() {
+            let _ = visit(&puzzle.grid);
+            return;
+        }
 
-            // If any of the related empty cells have only one possibility and it would be
-            // eliminated by filling the current cell, then clear the current cell, update
-            // the possibilities for the related empty cells, and continue to the next cell.
-            if empty_cell_indexes.iter().any(|eci| {
-                let ecp = puzzle
-                    .empty_cell_queue
-                    .get_priority_unsafe(*eci as usize)
-                    .unwrap();
-                ecp.len() == 1 && ecp.has(num)
-            }) {
-                puzzle.delete(current_cell_coords);
-                for ci in empty_cell_indexes {
-                    let element_set = puzzle.get_element_set(Self::get_cell_coords(ci));
+        // Initialize the stack with MRV cell
+        let (first_index, first_poss) = puzzle.empty_cell_queue.pop().unwrap();
+        let first_cell_coords = Self::get_cell_coords(first_index as u8);
+        let mut stack: ArrayVec<Frame, BOARD_SIZE> = ArrayVec::new();
+        stack.push(Frame {
+            cell_index: first_index as u8,
+            order: puzzle.order_values_lcv(first_cell_coords, first_poss),
+            next_ix: 0,
+            chosen: None,
+            undo: ArrayVec::new(),
+        });
+
+        // Main loop
+        'outer: while let Some(frame) = stack.last_mut() {
+            let coords = Self::get_cell_coords(frame.cell_index);
+
+            // If we had chosen a value previously at this depth, revert now
+            if frame.chosen.is_some() {
+                for &(ci, old_set) in frame.undo.iter().rev() {
                     puzzle
                         .empty_cell_queue
-                        .insert_unsafe((ci as usize, element_set));
+                        .insert_unsafe((ci as usize, old_set));
                 }
-                stack.push((current_cell_index, current_cell_possibilities));
-                continue;
+                frame.undo.clear();
+                puzzle.delete(coords);
+                frame.chosen = None;
             }
 
-            // Remove the number from the possibilities for the related empty cells
-            for ci in puzzle.get_empty_group_cell_indexes(current_cell_coords) {
-                let mut element_set = *puzzle
-                    .empty_cell_queue
-                    .get_priority_unsafe(ci as usize)
-                    .unwrap();
-                element_set.remove(num);
+            // Try next possibility at this depth
+            if (frame.next_ix as usize) < frame.order.len() {
+                let num = frame.order[frame.next_ix as usize];
+                frame.next_ix += 1;
+
+                puzzle.set(coords, num);
+                frame.undo.clear();
+
+                // Apply choice to neighbors (or detect contradiction early)
+                let dead_end = puzzle.propagate_choice(coords, num, &mut frame.undo);
+
+                // Propagate choice and check for dead end, undoing if necessary
+                if dead_end {
+                    // No updates were applied, so nothing to restore
+                    puzzle.delete(coords);
+                    continue;
+                }
+
+                // Record chosen value
+                frame.chosen = Some(num);
+
+                // Found a solution: yield and optionally stop
+                if puzzle.empty_cell_queue.is_empty() {
+                    if !visit(&puzzle.grid) {
+                        break 'outer;
+                    }
+                    // leave state; loop will revert on next iteration
+                    continue;
+                }
+
+                // Go deeper with next MRV
+                let (next_index, next_poss) = puzzle.empty_cell_queue.pop().unwrap();
+                let next_coords = Self::get_cell_coords(next_index as u8);
+                stack.push(Frame {
+                    cell_index: next_index as u8,
+                    order: puzzle.order_values_lcv(next_coords, next_poss),
+                    next_ix: 0,
+                    chosen: None,
+                    undo: ArrayVec::new(),
+                });
+            } else {
+                // Exhausted this cell: reinsert it and backtrack
+                let es = puzzle.get_element_set(coords);
                 puzzle
                     .empty_cell_queue
-                    .insert_unsafe((ci as usize, element_set));
+                    .insert_unsafe((frame.cell_index as usize, es));
+                stack.pop();
             }
-
-            // Add the next cell to the stack
-            stack.push(puzzle.empty_cell_queue.pop().unwrap());
         }
-
-        solutions
     }
 
-    /// Checks if the puzzle has exactly one solution
+    /// Find all solutions iteratively.
+    #[must_use]
+    pub fn find_solutions_iterative(puzzle: ClassicPuzzle) -> Vec<ClassicGrid> {
+        let mut sols = Vec::new();
+        Self::visit_solutions_iterative(puzzle, |grid| {
+            sols.push(*grid);
+            true
+        });
+        sols
+    }
+
+    /// Count all solutions iteratively.
+    #[must_use]
+    pub fn count_solutions_iterative(puzzle: ClassicPuzzle) -> usize {
+        let mut count = 0;
+        Self::visit_solutions_iterative(puzzle, |_| {
+            count += 1;
+            true
+        });
+        count
+    }
+
+    /// Find solutions up to a maximum count iteratively.
+    #[must_use]
+    pub fn find_solutions_bounded_iterative(
+        puzzle: ClassicPuzzle,
+        max_count: usize,
+    ) -> Vec<ClassicGrid> {
+        let mut sols = Vec::new();
+        if max_count == 0 {
+            return sols;
+        }
+        let mut count = 0;
+        Self::visit_solutions_iterative(puzzle, |grid| {
+            sols.push(*grid);
+            count += 1;
+            count < max_count
+        });
+        sols
+    }
+
+    /// Count solutions up to a maximum count iteratively.
+    #[must_use]
+    pub fn count_solutions_bounded_iterative(puzzle: ClassicPuzzle, max_count: usize) -> usize {
+        let mut count = 0;
+        if max_count == 0 {
+            return count;
+        }
+        Self::visit_solutions_iterative(puzzle, |_| {
+            count += 1;
+            count < max_count
+        });
+        count
+    }
+
+    /// Checks if the puzzle has exactly one solution.
     fn is_well_posed(&self) -> bool {
-        Self::find_solutions_recursive(self.clone()).len() == 1
+        Self::count_solutions_bounded_recursive(self.clone(), 2) == 1
     }
 
-    pub fn remove_from_rng<T: Rng>(&mut self, mut rng: &mut T) {
-        // Create a list of cells left to attempt
-        let mut all_cell_indexes: Vec<CellIndex> = (0..81).collect();
+    /// Clears cells from the puzzle until it has exactly one solution.
+    pub fn minimize_from_rng<T: Rng>(&mut self, mut rng: &mut T) {
+        // Create a list of pairs (cell index, value) for all filled cells in the grid
+        let mut unattempted_filled_cell_pairs = self.get_all_filled_cell_pairs();
 
         // Shuffle the cells
-        all_cell_indexes.shuffle(&mut rng);
+        unattempted_filled_cell_pairs.shuffle(&mut rng);
 
         // Loop until there are no cells left to attempt
-        while let Some(current_cell_index) = all_cell_indexes.pop() {
+        while let Some((current_cell_index, cell_value)) = unattempted_filled_cell_pairs.pop() {
             let cell_coords = Self::get_cell_coords(current_cell_index);
-
-            let val = self.grid.get((cell_coords.0, cell_coords.1)).unwrap();
 
             // Try to remove the value from this cell
             self.delete(cell_coords);
 
-            // Make a clone of the cell queue to reset it later if necessary
+            // Make a clone of the cell queue to reset it later. It's efficient to just clone the
+            // queue if it needs to be reset because it also keeps track of the neighbors in the
+            // same group.
             let original_empty_cell_queue = self.empty_cell_queue.clone();
 
             // Add this cell to the empty cell queue and update the possibilities for all of the
             // empty cells in its group.
-            for cell_index in self.get_empty_group_cell_indexes(cell_coords) {
-                let cell_coords = Self::get_cell_coords(cell_index);
-                let possibilities = self.get_element_set(cell_coords);
-                self.empty_cell_queue
-                    .insert_unsafe((cell_index as usize, possibilities));
+            let buf = self.collect_empty_neighbors_for(cell_coords);
+            for ci in &buf {
+                let coords = Self::get_cell_coords(*ci);
+                let es = self.get_element_set(coords);
+                self.empty_cell_queue.insert_unsafe((*ci as usize, es));
             }
 
-            // If the board is well-posed (there is only one solution), then continue clearing cells
-            if self.is_well_posed() {
-                continue;
+            // If the board is not well-posed, then put the value back and reset the queue.
+            if !self.is_well_posed() {
+                // Put the value back if the puzzle is no longer well-posed
+                self.set(cell_coords, cell_value);
+
+                // Need to remove this cell from the queue and reset the possibilities for cells in
+                // its group.
+                self.empty_cell_queue = original_empty_cell_queue;
             }
+        }
+    }
 
-            // Put the value back if the puzzle is no longer well-posed
-            self.set(cell_coords, val);
-
-            // Need to remove this cell from the queue and reset the possibilities for cells in its
-            // group.
-            self.empty_cell_queue = original_empty_cell_queue;
+    pub fn remove_n_random_filled_cells<T: Rng>(&mut self, rng: &mut T, n: usize) {
+        let filled_cell_pairs = self.get_all_filled_cell_pairs();
+        for _ in 0..n {
+            let pair_index = rng.random_range(0..filled_cell_pairs.len());
+            let (cell_index, _) = filled_cell_pairs[pair_index];
+            let cell_coords = Self::get_cell_coords(cell_index);
+            self.delete(cell_coords);
+            let possibilities = self.get_element_set(cell_coords);
+            self.empty_cell_queue
+                .insert_unsafe((cell_index as usize, possibilities));
         }
     }
 
     /// Creates and sets up a puzzle given some string seed
+    #[must_use]
     pub fn from_seed(seed: String) -> Self {
         let mut puzzle = ClassicPuzzle::new();
 
@@ -404,11 +719,12 @@ impl ClassicPuzzle {
         puzzle.fill_from_rng(&mut rng);
 
         // Remove numbers
-        puzzle.remove_from_rng(&mut rng);
+        puzzle.minimize_from_rng(&mut rng);
 
         puzzle
     }
 
+    #[must_use]
     pub fn num_clues(&self) -> u8 {
         (0..9).fold(0, |acc: u8, row| acc + (9 - self.row_sets[row].len()))
     }
@@ -422,7 +738,7 @@ impl Display for ClassicPuzzle {
 }
 
 impl From<ClassicGrid> for ClassicPuzzle {
-    /// Creates a new ClassicPuzzle from a ClassicGrid
+    /// Creates a new `ClassicPuzzle` from a `ClassicGrid`
     fn from(grid: ClassicGrid) -> Self {
         fn set_from_iter<'a, I: Iterator<Item = &'a Option<u8>>>(iter: I) -> ElementSet {
             let mut element_set = ElementSet::CLASSIC;
@@ -437,11 +753,11 @@ impl From<ClassicGrid> for ClassicPuzzle {
         let col_sets = std::array::from_fn(|i| set_from_iter(grid.iter_col(i as u8)));
         let box_sets = std::array::from_fn(|i| set_from_iter(grid.iter_box(i as u8)));
 
-        let mut empty_cell_queue = PriorityQueue::with_capacity(81);
-        empty_cell_queue.init_map_none(81);
-        empty_cell_queue.fill_from_iter_unsafe((0..81).filter_map(|cell_index| {
+        let mut empty_cell_queue = ArrayPriorityQueue::new();
+        empty_cell_queue.init_map_none(BOARD_SIZE);
+        empty_cell_queue.fill_from_iter_unsafe((0..BOARD_SIZE).filter_map(|cell_index| {
             let (row_index, col_index, box_index) = Self::get_cell_coords(cell_index as u8);
-            if grid.get((row_index, col_index)).is_none() {
+            if grid.get_by_row_col((row_index, col_index)).is_none() {
                 let element_set = row_sets[row_index as usize]
                     .intersection(&col_sets[col_index as usize])
                     .intersection(&box_sets[box_index as usize]);
@@ -462,7 +778,7 @@ impl From<ClassicGrid> for ClassicPuzzle {
 }
 
 impl From<&str> for ClassicPuzzle {
-    /// Creates a new ClassicPuzzle from a grid string
+    /// Creates a new `ClassicPuzzle` from a grid string
     fn from(s: &str) -> Self {
         Self::from(ClassicGrid::from(s))
     }
@@ -470,6 +786,7 @@ impl From<&str> for ClassicPuzzle {
 
 #[cfg(test)]
 mod tests {
+
     use indoc::indoc;
 
     use super::*;
@@ -477,67 +794,103 @@ mod tests {
 
     const SEED: &str = "test";
 
-    const FILLED_PUZZLE_STR: &str = indoc! {"
-        9 2 6 | 8 3 4 | 5 7 1
-        4 8 5 | 7 1 9 | 3 2 6
-        1 3 7 | 5 6 2 | 8 4 9
+    const SEED_PUZZLE_SOLUTION_STR: &str = indoc! {"
+        5 6 2 | 1 4 3 | 9 8 7
+        3 7 8 | 2 5 9 | 6 1 4
+        9 4 1 | 7 8 6 | 3 2 5
         ------|-------|------
-        2 6 9 | 1 4 8 | 7 3 5
-        5 7 1 | 6 2 3 | 4 9 8
-        3 4 8 | 9 7 5 | 1 6 2
+        4 8 6 | 5 1 2 | 7 3 9
+        7 2 3 | 9 6 8 | 5 4 1
+        1 5 9 | 4 3 7 | 8 6 2
         ------|-------|------
-        7 9 4 | 2 8 1 | 6 5 3
-        8 5 3 | 4 9 6 | 2 1 7
-        6 1 2 | 3 5 7 | 9 8 4
+        2 3 4 | 8 7 5 | 1 9 6
+        8 9 7 | 6 2 1 | 4 5 3
+        6 1 5 | 3 9 4 | 2 7 8
     "};
 
-    const MINIMUM_PUZZLE_STR: &str = indoc! {"
-        . 2 . | . . . | . 7 1
-        . . . | . . 9 | . . 6
-        1 . . | 5 6 . | 8 . .
+    const SEED_PUZZLE_MINIMUM_STR: &str = indoc! {"
+        . 6 . | 1 . . | . 8 7
+        . . . | . . 9 | . . 4
+        9 . . | 7 8 . | 3 . .
         ------|-------|------
-        . . 9 | 1 . . | . . .
-        . . . | . . 3 | 4 . .
-        . . . | . 7 . | . 6 .
+        . . 6 | 5 . 2 | . . .
+        . . . | 9 . 8 | . . .
+        . . . | . 3 . | . . .
         ------|-------|------
-        7 . . | . 8 . | . . 3
-        8 5 3 | . . . | 2 . .
-        . . . | . . . | . . 4
+        2 . . | . 7 . | . . 6
+        8 9 7 | . 2 . | 4 . .
+        . . 5 | . . . | . . 8
     "};
 
+    /// A test puzzle with the absolute minimum number of clues (17). Taken from wikipedia.
+    const HARD_PUZZLE_MINIMUM_STR: &str = indoc! {"
+        . . . | . . . | . 1 .
+        . . . | . . 2 | . . 3
+        . . . | 4 . . | . . .
+        ------|-------|------
+        . . . | . . . | 5 . .
+        4 . 1 | 6 . . | . . .
+        . . 7 | 1 . . | . . .
+        ------|-------|------
+        . 5 . | . . . | 2 . .
+        . . . | . 8 . | . 4 .
+        . 3 . | 9 1 . | . . .
+    "};
+
+    /// The solution to the minimum puzzle above.
+    const HARD_PUZZLE_SOLUTION_STR: &str = indoc! {"
+        7 4 5 | 3 6 8 | 9 1 2
+        8 1 9 | 5 7 2 | 4 6 3
+        3 6 2 | 4 9 1 | 8 5 7
+        ------|-------|------
+        6 9 3 | 8 2 4 | 5 7 1
+        4 2 1 | 6 5 7 | 3 9 8
+        5 8 7 | 1 3 9 | 6 2 4
+        ------|-------|------
+        1 5 8 | 7 4 6 | 2 3 9
+        9 7 6 | 2 8 3 | 1 4 5
+        2 3 4 | 9 1 5 | 7 8 6
+    "};
+
+    /// Test that setting and deleting a value works correctly.
     #[test]
     fn set_and_delete() {
         let mut puzzle = ClassicPuzzle::new();
         puzzle.set((0, 0, 0), 1);
-        assert_eq!(puzzle.grid.get((0, 0)), Some(1));
+        assert_eq!(puzzle.grid.get_by_row_col((0, 0)), Some(1));
         puzzle.delete((0, 0, 0));
-        assert_eq!(puzzle.grid.get((0, 0)), None);
+        assert_eq!(puzzle.grid.get_by_row_col((0, 0)), None);
     }
 
+    /// Test that getting the cell index given a row and column works correctly.
     #[test]
     fn get_cell_index() {
         assert_eq!(ClassicPuzzle::get_cell_index((0, 0)), 0);
         assert_eq!(ClassicPuzzle::get_cell_index((8, 8)), 80);
     }
 
+    /// Test that getting the row and column given a cell index works correctly.
     #[test]
     fn get_row_col() {
         assert_eq!(ClassicPuzzle::get_row_col(0), (0, 0));
         assert_eq!(ClassicPuzzle::get_row_col(80), (8, 8));
     }
 
+    /// Test that getting the box index given a row and column works correctly.
     #[test]
     fn get_box_index() {
         assert_eq!(ClassicPuzzle::get_box_index((0, 0)), 0);
         assert_eq!(ClassicPuzzle::get_box_index((8, 8)), 8);
     }
 
+    /// Test that getting the coordinate tuple of a cell index works correctly.
     #[test]
     fn get_cell_coords() {
         assert_eq!(ClassicPuzzle::get_cell_coords(0), (0, 0, 0));
         assert_eq!(ClassicPuzzle::get_cell_coords(80), (8, 8, 8));
     }
 
+    /// Test that loading an empty puzzle from a grid sets the fields in the puzzle correctly.
     #[test]
     fn from_grid_empty() {
         let grid = ClassicGrid::default();
@@ -555,12 +908,13 @@ mod tests {
             .box_sets
             .iter()
             .all(|box_set| box_set == &ElementSet::CLASSIC));
-        assert_eq!(puzzle.empty_cell_queue.len(), 81);
+        assert_eq!(puzzle.empty_cell_queue.len(), BOARD_SIZE);
     }
 
+    /// Test that loading a filled puzzle from a string sets the fields in the puzzle correctly.
     #[test]
     fn from_grid_filled() {
-        let grid = ClassicGrid::from(FILLED_PUZZLE_STR);
+        let grid = ClassicGrid::from(SEED_PUZZLE_SOLUTION_STR);
         let puzzle = ClassicPuzzle::from(grid);
         assert_eq!(puzzle.grid, grid);
         assert!(puzzle.row_sets.iter().all(|row_set| row_set.is_empty()));
@@ -569,37 +923,37 @@ mod tests {
         assert!(puzzle.empty_cell_queue.is_empty());
     }
 
+    /// Test that loading a puzzle from a string sets the fields in the puzzle correctly.
     #[test]
     fn from_grid_minimum() {
-        let grid = ClassicGrid::from(MINIMUM_PUZZLE_STR);
+        let grid = ClassicGrid::from(SEED_PUZZLE_MINIMUM_STR);
         let puzzle = ClassicPuzzle::from(grid);
-        let expected_row_set_lens = [6, 7, 5, 7, 7, 7, 6, 5, 8];
-        let expected_col_set_lens = [6, 7, 7, 7, 6, 7, 6, 7, 5];
-        let expected_box_set_lens = [7, 6, 5, 8, 6, 7, 5, 8, 6];
+        let expected_row_set_lens = [5, 7, 5, 6, 7, 8, 6, 4, 7];
+        let expected_col_set_lens = [6, 7, 6, 5, 5, 6, 7, 8, 5];
+        let expected_box_set_lens = [7, 5, 5, 8, 4, 9, 4, 7, 6];
         let check_sizes = |sets: &[ElementSet], expected_lens: &[u8], set_type: &str| {
-            sets.iter().enumerate().for_each(|(i, set)| {
-                let actual_len = set.len();
-                let expected_len = expected_lens[i];
-                assert_eq!(
-                    actual_len, expected_len,
-                    "expected {} set {} to have a length of {} but it was {}",
-                    set_type, i, expected_len, actual_len
-                );
-            })
+            let set_lens: Vec<u8> = sets.iter().map(|set| set.len()).collect();
+            assert_eq!(
+                set_lens, expected_lens,
+                "expected {} set lengths to be {:?} but they were {:?}",
+                set_type, expected_lens, set_lens
+            );
         };
         assert_eq!(puzzle.grid, grid);
         check_sizes(&puzzle.row_sets, &expected_row_set_lens, "row");
         check_sizes(&puzzle.col_sets, &expected_col_set_lens, "col");
         check_sizes(&puzzle.box_sets, &expected_box_set_lens, "box");
-        assert_eq!(puzzle.empty_cell_queue.len(), 58);
+        assert_eq!(puzzle.empty_cell_queue.len(), 55);
     }
 
+    /// Test that loading a puzzle from a string and back produces the original string.
     #[test]
     fn display() {
-        let puzzle = ClassicPuzzle::from(FILLED_PUZZLE_STR);
-        assert_eq!(puzzle.to_string(), FILLED_PUZZLE_STR);
+        let puzzle = ClassicPuzzle::from(SEED_PUZZLE_SOLUTION_STR);
+        assert_eq!(puzzle.to_string(), SEED_PUZZLE_SOLUTION_STR);
     }
 
+    /// Test that filling from RNG produces the expected puzzle for a given seed.
     #[test]
     fn fill_from_rng_determinism() {
         let mut rng: SipRng = SipHasher::from(SEED).into_rng();
@@ -608,13 +962,14 @@ mod tests {
         let puzzle_str = puzzle.to_string();
         assert_eq!(
             puzzle_str,
-            FILLED_PUZZLE_STR,
+            SEED_PUZZLE_SOLUTION_STR,
             "Generated puzzle\n{}should equal\n{}",
             puzzle_str.replace("\n", "    \n"),
-            FILLED_PUZZLE_STR.replace("\n", "    \n")
+            SEED_PUZZLE_SOLUTION_STR.replace("\n", "    \n")
         );
     }
 
+    /// Test that filling from RNG produces a valid puzzle for many different seeds.
     #[test]
     fn fill_from_rng_total() {
         let mut seed_rng: SipRng = SipHasher::from(SEED).into_rng();
@@ -626,73 +981,219 @@ mod tests {
         }
     }
 
+    /// Test that filling from RNG produces exactly one solution even when the puzzle is filled.
     #[test]
-    fn find_solutions_filled() {
-        let puzzle = ClassicPuzzle::from(FILLED_PUZZLE_STR);
+    fn find_solutions_filled_recursive() {
+        let puzzle = ClassicPuzzle::from(HARD_PUZZLE_SOLUTION_STR);
         let solutions = ClassicPuzzle::find_solutions_recursive(puzzle.clone());
         assert_eq!(solutions.len(), 1);
+        assert_eq!(solutions[0].to_string(), HARD_PUZZLE_SOLUTION_STR);
     }
 
+    /// Test that filling from RNG produces exactly one solution when one cell is empty.
     #[test]
-    fn find_solutions_one_missing() {
-        let mut puzzle = ClassicPuzzle::from(FILLED_PUZZLE_STR);
-        puzzle.delete((0, 1, 0));
+    fn find_solutions_one_missing_recursive() {
+        let mut puzzle = ClassicPuzzle::from(HARD_PUZZLE_SOLUTION_STR);
+        let cell_index = 7;
+        let cell_coords = ClassicPuzzle::get_cell_coords(cell_index);
+        puzzle.delete(cell_coords);
+        let possibilities = puzzle.get_element_set(cell_coords);
+        puzzle
+            .empty_cell_queue
+            .insert_unsafe((cell_index as usize, possibilities));
         let solutions = ClassicPuzzle::find_solutions_recursive(puzzle.clone());
         assert_eq!(solutions.len(), 1);
+        assert_eq!(solutions[0].to_string(), HARD_PUZZLE_SOLUTION_STR);
     }
 
+    /// Test that filling from RNG produces exactly one solution when one row is empty.
     #[test]
-    fn find_solutions_row_missing() {
-        let mut puzzle = ClassicPuzzle::from(FILLED_PUZZLE_STR);
+    fn find_solutions_row_missing_recursive() {
+        let mut puzzle = ClassicPuzzle::from(HARD_PUZZLE_SOLUTION_STR);
+
+        // Delete the entire first row (row = 0) with correct coords
+        let mut row_cell_indexes = Vec::with_capacity(9);
         for col in 0..9 {
-            puzzle.delete((0, col, 0));
+            let cell_index = ClassicPuzzle::get_cell_index((0, col));
+            let cell_coords = ClassicPuzzle::get_cell_coords(cell_index);
+            puzzle.delete(cell_coords);
+            row_cell_indexes.push(cell_index);
         }
+
+        // Insert the empty cells into the queue with up-to-date possibilities
+        for cell_index in row_cell_indexes {
+            let cell_coords = ClassicPuzzle::get_cell_coords(cell_index);
+            let possibilities = puzzle.get_element_set(cell_coords);
+            puzzle
+                .empty_cell_queue
+                .insert_unsafe((cell_index as usize, possibilities));
+        }
+
         let solutions = ClassicPuzzle::find_solutions_recursive(puzzle.clone());
         assert_eq!(solutions.len(), 1);
+        assert_eq!(solutions[0].to_string(), HARD_PUZZLE_SOLUTION_STR);
     }
 
-    // FIXME - The iterative solution finding algorithm is not working correctly. After it's fixed,
-    // benchmark it against the recursive solution finding algorithm.
+    /// Test that filling from RNG produces exactly one solution when initialized with a minimum
+    /// puzzle.
     #[test]
-    fn find_solutions_minimum() {
-        let puzzle = ClassicPuzzle::from(MINIMUM_PUZZLE_STR);
+    fn find_solutions_minimum_recursive() {
+        let puzzle = ClassicPuzzle::from(HARD_PUZZLE_MINIMUM_STR);
         let solutions = ClassicPuzzle::find_solutions_recursive(puzzle.clone());
         assert_eq!(solutions.len(), 1);
+        assert_eq!(solutions[0].to_string(), HARD_PUZZLE_SOLUTION_STR);
     }
 
+    /// Test that filling from RNG produces more than one solution when initialized with a minimum
+    /// puzzle that has had one cell cleared.
     #[test]
-    fn find_solutions_multiple() {
-        let mut puzzle = ClassicPuzzle::from(MINIMUM_PUZZLE_STR);
-        puzzle.delete((0, 1, 0));
+    fn find_solutions_multiple_recursive() {
+        let mut puzzle = ClassicPuzzle::from(HARD_PUZZLE_MINIMUM_STR);
+        let cell_index = 7;
+        let cell_coords = ClassicPuzzle::get_cell_coords(cell_index);
+        puzzle.delete(cell_coords);
+        let possibilities = puzzle.get_element_set(cell_coords);
+        puzzle
+            .empty_cell_queue
+            .insert_unsafe((cell_index as usize, possibilities));
         let solutions = ClassicPuzzle::find_solutions_recursive(puzzle.clone());
         assert!(solutions.len() > 1);
     }
 
+    /// Test that filling from RNG produces exactly one solution even when the puzzle is filled.
+    #[test]
+    fn find_solutions_filled_iterative() {
+        let puzzle = ClassicPuzzle::from(HARD_PUZZLE_SOLUTION_STR);
+        let solutions = ClassicPuzzle::find_solutions_iterative(puzzle.clone());
+        assert_eq!(solutions.len(), 1);
+        assert_eq!(solutions[0].to_string(), HARD_PUZZLE_SOLUTION_STR);
+    }
+
+    /// Test that filling from RNG produces exactly one solution when one cell is empty.
+    #[test]
+    fn find_solutions_one_missing_iterative() {
+        let mut puzzle = ClassicPuzzle::from(HARD_PUZZLE_SOLUTION_STR);
+        let cell_index = 7;
+        let cell_coords = ClassicPuzzle::get_cell_coords(cell_index);
+        puzzle.delete(cell_coords);
+        let possibilities = puzzle.get_element_set(cell_coords);
+        puzzle
+            .empty_cell_queue
+            .insert_unsafe((cell_index as usize, possibilities));
+        let solutions = ClassicPuzzle::find_solutions_iterative(puzzle.clone());
+        assert_eq!(solutions.len(), 1);
+        assert_eq!(solutions[0].to_string(), HARD_PUZZLE_SOLUTION_STR);
+    }
+
+    /// Test that filling from RNG produces exactly one solution when one row is empty.
+    #[test]
+    fn find_solutions_row_missing_iterative() {
+        let mut puzzle = ClassicPuzzle::from(HARD_PUZZLE_SOLUTION_STR);
+
+        // Delete the entire first row (row = 0) with correct coords
+        let mut row_cell_indexes = Vec::with_capacity(9);
+        for col in 0..9 {
+            let cell_index = ClassicPuzzle::get_cell_index((0, col));
+            let cell_coords = ClassicPuzzle::get_cell_coords(cell_index);
+            puzzle.delete(cell_coords);
+            row_cell_indexes.push(cell_index);
+        }
+
+        // Insert the empty cells into the queue with up-to-date possibilities
+        for cell_index in row_cell_indexes {
+            let cell_coords = ClassicPuzzle::get_cell_coords(cell_index);
+            let possibilities = puzzle.get_element_set(cell_coords);
+            puzzle
+                .empty_cell_queue
+                .insert_unsafe((cell_index as usize, possibilities));
+        }
+
+        let solutions = ClassicPuzzle::find_solutions_iterative(puzzle.clone());
+        assert_eq!(solutions.len(), 1);
+        assert_eq!(solutions[0].to_string(), HARD_PUZZLE_SOLUTION_STR);
+    }
+
+    // FIXME - The iterative solution finding algorithm is not working correctly. After it's fixed,
+    // benchmark it against the recursive solution finding algorithm.
+    /// Test that filling from RNG produces exactly one solution when initialized with a minimum
+    /// puzzle.
+    #[test]
+    fn find_solutions_minimum_iterative() {
+        let puzzle = ClassicPuzzle::from(HARD_PUZZLE_MINIMUM_STR);
+        let solutions = ClassicPuzzle::find_solutions_iterative(puzzle.clone());
+        assert_eq!(solutions.len(), 1);
+        assert_eq!(solutions[0].to_string(), HARD_PUZZLE_SOLUTION_STR);
+    }
+
+    /// Test that filling from RNG produces more than one solution when initialized with a minimum
+    /// puzzle that has had one cell cleared.
+    #[test]
+    fn find_solutions_multiple_iterative() {
+        let mut puzzle = ClassicPuzzle::from(HARD_PUZZLE_MINIMUM_STR);
+        let cell_index = 7;
+        let cell_coords = ClassicPuzzle::get_cell_coords(cell_index);
+        puzzle.delete(cell_coords);
+        let possibilities = puzzle.get_element_set(cell_coords);
+        puzzle
+            .empty_cell_queue
+            .insert_unsafe((cell_index as usize, possibilities));
+        let solutions = ClassicPuzzle::find_solutions_iterative(puzzle.clone());
+        assert!(solutions.len() > 1);
+    }
+
+    /// Test that a puzzle with the minimum number of clues is well-posed.
     #[test]
     fn is_well_posed() {
-        let puzzle = ClassicPuzzle::from(MINIMUM_PUZZLE_STR);
+        let puzzle = ClassicPuzzle::from(HARD_PUZZLE_MINIMUM_STR);
         assert!(puzzle.is_well_posed());
     }
 
+    /// Test that a puzzle that has too few clues is not well-posed.
     #[test]
     fn is_not_well_posed() {
-        let mut puzzle = ClassicPuzzle::from(MINIMUM_PUZZLE_STR);
-        puzzle.delete((0, 1, 0));
+        let mut puzzle = ClassicPuzzle::from(HARD_PUZZLE_MINIMUM_STR);
+        let cell_index = 7;
+        let cell_coords = ClassicPuzzle::get_cell_coords(cell_index);
+        puzzle.delete(cell_coords);
+        let possibilities = puzzle.get_element_set(cell_coords);
+        puzzle
+            .empty_cell_queue
+            .insert_unsafe((cell_index as usize, possibilities));
         assert!(!puzzle.is_well_posed());
     }
 
+    /// Test that minimizing a puzzle from a random number generator produces the expected minimum
+    /// puzzle.
     #[test]
-    fn remove_from_rng_determinism() {
-        let mut puzzle = ClassicPuzzle::from(FILLED_PUZZLE_STR);
+    fn minimize_from_rng_determinism() {
+        let mut puzzle = ClassicPuzzle::from(SEED_PUZZLE_SOLUTION_STR);
         let mut rng: SipRng = SipHasher::from(SEED).into_rng();
-        puzzle.remove_from_rng(&mut rng);
+        puzzle.minimize_from_rng(&mut rng);
         let puzzle_str = puzzle.to_string();
         assert_eq!(
             puzzle_str,
-            MINIMUM_PUZZLE_STR,
+            SEED_PUZZLE_MINIMUM_STR,
             "Generated puzzle\n{}should equal\n{}",
             puzzle_str.replace("\n", "    \n"),
-            MINIMUM_PUZZLE_STR.replace("\n", "    \n")
+            SEED_PUZZLE_MINIMUM_STR.replace("\n", "    \n")
         );
+    }
+
+    #[test]
+    fn ill_posed_puzzle_has_more_than_one_solution_recursive() {
+        let mut puzzle = ClassicPuzzle::from(HARD_PUZZLE_MINIMUM_STR);
+        let mut rng: SipRng = SipHasher::from(SEED).into_rng();
+        puzzle.remove_n_random_filled_cells(&mut rng, 1);
+        let num_solutions = ClassicPuzzle::count_solutions_recursive(puzzle);
+        assert!(num_solutions > 1);
+    }
+
+    #[test]
+    fn ill_posed_puzzle_has_more_than_one_solution_iterative() {
+        let mut puzzle = ClassicPuzzle::from(HARD_PUZZLE_MINIMUM_STR);
+        let mut rng: SipRng = SipHasher::from(SEED).into_rng();
+        puzzle.remove_n_random_filled_cells(&mut rng, 1);
+        let num_solutions = ClassicPuzzle::count_solutions_iterative(puzzle);
+        assert!(num_solutions > 1);
     }
 }

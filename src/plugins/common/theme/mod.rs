@@ -99,10 +99,7 @@ fn theme_init_system(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Use system theme to set initial app theme
     let app_theme: Theme = match dark_light::detect().unwrap_or(dark_light::Mode::Unspecified) {
         dark_light::Mode::Dark => Theme::dark(text_font_regular, text_font_bold, text_font_symbols),
-        dark_light::Mode::Unspecified => {
-            Theme::light(text_font_regular, text_font_bold, text_font_symbols)
-        }
-        dark_light::Mode::Light => {
+        dark_light::Mode::Unspecified | dark_light::Mode::Light => {
             Theme::light(text_font_regular, text_font_bold, text_font_symbols)
         }
     };

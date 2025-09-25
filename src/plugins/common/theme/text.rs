@@ -35,13 +35,13 @@ fn themed_text_change_system(
     mut text_cursor_query: Query<&mut BackgroundColor, With<TextInputCursor>>,
     mut themed_font_weight_query: Query<(&mut TextFont, &ThemedFontWeight)>,
 ) {
-    for mut text_color in themed_text_color_query.iter_mut() {
+    for mut text_color in &mut themed_text_color_query {
         text_color.0 = theme.text_color;
     }
-    for mut text_input_cursor_background_color in text_cursor_query.iter_mut() {
+    for mut text_input_cursor_background_color in &mut text_cursor_query {
         text_input_cursor_background_color.0 = theme.text_color;
     }
-    for (mut text_font, font_weight) in themed_font_weight_query.iter_mut() {
+    for (mut text_font, font_weight) in &mut themed_font_weight_query {
         text_font.font = match font_weight {
             ThemedFontWeight::Regular => theme.text_font_regular.clone(),
             ThemedFontWeight::Bold => theme.text_font_bold.clone(),
@@ -55,10 +55,10 @@ fn themed_text_color_added_system(
     mut themed_text_color_query: Query<&mut TextColor, Added<ThemedTextColor>>,
     mut text_cursor_query: Query<&mut BackgroundColor, Added<TextInputCursor>>,
 ) {
-    for mut text_color in themed_text_color_query.iter_mut() {
+    for mut text_color in &mut themed_text_color_query {
         text_color.0 = theme.text_color;
     }
-    for mut text_cursor_background_color in text_cursor_query.iter_mut() {
+    for mut text_cursor_background_color in &mut text_cursor_query {
         text_cursor_background_color.0 = theme.text_color;
     }
 }
@@ -70,7 +70,7 @@ fn themed_font_weight_system(
         Added<ThemedFontWeight>,
     >,
 ) {
-    for (mut text_font, font_weight) in themed_font_weight_query.iter_mut() {
+    for (mut text_font, font_weight) in &mut themed_font_weight_query {
         text_font.font = match font_weight {
             ThemedFontWeight::Regular => theme.text_font_regular.clone(),
             ThemedFontWeight::Bold => theme.text_font_bold.clone(),

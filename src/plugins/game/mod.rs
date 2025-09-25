@@ -20,6 +20,7 @@ pub enum PuzzleType {
 }
 
 impl PuzzleType {
+    #[must_use]
     pub fn description(&self) -> String {
         match self {
             PuzzleType::Classic => indoc! {"

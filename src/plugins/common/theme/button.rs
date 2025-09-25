@@ -17,7 +17,7 @@ fn themed_button_interaction_system(
         ),
     >,
 ) {
-    for (mut background_color, interaction) in themed_button_query.iter_mut() {
+    for (mut background_color, interaction) in &mut themed_button_query {
         *background_color = match *interaction {
             Interaction::None => theme.button_normal_background,
             Interaction::Hovered => theme.button_hovered_background,
