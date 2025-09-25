@@ -169,18 +169,6 @@ impl ClassicPuzzle {
         // First pass (single pass actually): detect immediate contradiction and gather updates
         let mut to_update: ArrayVec<(CellIndex, ElementSet), GROUP_SIZE> = ArrayVec::new();
 
-        // for &ci in neighbors.iter() {
-        //     if ci != current_index && self.grid.get_by_row_col(Self::get_row_col(ci)).is_none() {
-        //         debug_assert!(
-        //             self.empty_cell_queue
-        //                 .get_priority_unsafe(ci as usize)
-        //                 .is_some(),
-        //             "Queue missing empty neighbor {}",
-        //             ci
-        //         );
-        //     }
-        // }
-
         // Attempt the value from the neighbor's possibilities
         for &ci in &neighbors {
             // Skip the current cell
