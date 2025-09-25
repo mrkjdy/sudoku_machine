@@ -1,24 +1,43 @@
+use arrayvec::ArrayVec;
+use std::cmp::Ordering;
 use std::fmt::Debug;
 
-#[derive(Clone, Debug, Default)]
-pub struct PriorityQueue<P: Ord + Debug> {
-    heap: Vec<usize>,
-    map: Vec<Option<(usize, P)>>,
+#[derive(Clone, Debug)]
+pub struct ArrayPriorityQueue<P: Ord + Debug, const N: usize> {
+    /// A vector containing the indices of elements in the priority queue.
+    heap: ArrayVec<usize, N>,
+    /// A vector that maps indices to their corresponding priority values.
+    map: ArrayVec<Option<(usize, P)>, N>,
 }
 
-impl<P: Ord + Debug> PriorityQueue<P> {
-    /// Create a new empty PriorityQueue
-    pub fn with_capacity(capacity: usize) -> Self {
+impl<P: Ord + Debug, const N: usize> Default for ArrayPriorityQueue<P, N> {
+    /// Creates a new, empty, fixed-size priority queue based on the provided capacity in the type
+    /// annotation.
+    fn default() -> Self {
         Self {
-            heap: Vec::with_capacity(capacity),
-            map: Vec::with_capacity(capacity),
+            heap: ArrayVec::new(),
+            map: ArrayVec::new(), // will be grown with None via init_map_none
         }
     }
+}
 
-    /// Initialize the map with None values up to the required length.
+impl<P: Ord + Debug, const N: usize> ArrayPriorityQueue<P, N> {
+    /// Create a new, empty, fixed-size priority queue based on the provided capacity in the type
+    /// annotation.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Ensure the map has at least `required_len` entries, filling with None.
     pub fn init_map_none(&mut self, required_len: usize) {
-        let current_len = self.map.len();
-        self.map.extend((current_len..required_len).map(|_| None));
+        debug_assert!(
+            required_len <= N,
+            "required_len {required_len} exceeds fixed capacity {N}",
+        );
+        while self.map.len() < required_len {
+            self.map.push(None);
+        }
     }
 
     /// Fill the priority queue from an iterator.
@@ -36,16 +55,19 @@ impl<P: Ord + Debug> PriorityQueue<P> {
     }
 
     /// Get the index of the parent of the item at the given index
+    #[inline]
     fn get_parent_index(i: usize) -> usize {
         (i - 1) / 2
     }
 
     /// Get the index of the left child of the item at the given index
+    #[inline]
     fn get_left_child_index(i: usize) -> usize {
         2 * i + 1
     }
 
     /// Get the index of the right child of the item at the given index
+    #[inline]
     fn get_right_child_index(i: usize) -> usize {
         2 * i + 2
     }
@@ -145,18 +167,29 @@ impl<P: Ord + Debug> PriorityQueue<P> {
     /// This function is unsafe because it assumes that the map is large enough to contain the
     /// index.
     pub fn insert_unsafe(&mut self, (map_index, new_priority): (usize, P)) {
-        if let Some((heap_index, old_priority)) = self.map[map_index].take() {
-            let is_gt_old = new_priority.gt(&old_priority);
-            self.map[map_index] = Some((heap_index, new_priority));
-            if is_gt_old {
-                self.heapify_up(heap_index);
-            } else {
-                self.heapify_down(heap_index);
+        debug_assert!(
+            map_index < N,
+            "map_index {map_index} exceeds fixed capacity {N}",
+        );
+        if map_index >= self.map.len() {
+            self.init_map_none(map_index + 1);
+        }
+        let slot = &mut self.map[map_index];
+        if let Some((heap_index, old_priority)) = slot.take() {
+            *slot = Some((heap_index, new_priority));
+            match self
+                .get_priority_heap_index_unsafe(heap_index)
+                .unwrap()
+                .cmp(&old_priority)
+            {
+                Ordering::Greater => self.heapify_up(heap_index),
+                Ordering::Less => self.heapify_down(heap_index),
+                Ordering::Equal => { /* no-op: priority unchanged */ }
             }
         } else {
             let heap_index = self.heap.len();
             self.heap.push(map_index);
-            self.map[map_index] = Some((heap_index, new_priority));
+            *slot = Some((heap_index, new_priority));
             self.heapify_up(heap_index);
         }
     }
@@ -171,8 +204,10 @@ impl<P: Ord + Debug> PriorityQueue<P> {
             self.swap(0, last_index);
         }
         let index = self.heap.pop().unwrap();
-        let (_, priority) = self.map[index].take().unwrap();
-        self.heapify_down(0);
+        let (.., priority) = self.map[index].take().unwrap();
+        if !self.heap.is_empty() {
+            self.heapify_down(0);
+        }
         Some((index, priority))
     }
 
@@ -207,64 +242,69 @@ impl<P: Ord + Debug> PriorityQueue<P> {
     /// Delete an item from the priority queue
     pub fn delete(&mut self, map_index: usize) {
         if let Some((heap_index, _)) = self.map[map_index].take() {
-            // Pop the last value off of the heap
-            if let Some(last_index) = self.heap.pop() {
-                if last_index != map_index {
-                    self.heap[heap_index] = last_index;
+            // Remove last element from heap
+            let maybe_last = self.heap.pop();
+            if let Some(last_map_index) = maybe_last {
+                if last_map_index != map_index {
+                    // Move last element into the freed slot
+                    self.heap[heap_index] = last_map_index;
+
+                    // Update moved element's map entry to its new heap index
+                    let slot = &mut self.map[last_map_index];
+                    if let Some((_, p)) = slot.take() {
+                        *slot = Some((heap_index, p));
+                    }
+
+                    // Restore heap property (up or down depending on relation to parent)
+                    if heap_index > 0 {
+                        let parent = Self::get_parent_index(heap_index);
+                        if self
+                            .get_priority_heap_index_unsafe(heap_index)
+                            .gt(&self.get_priority_heap_index_unsafe(parent))
+                        {
+                            self.heapify_up(heap_index);
+                            return;
+                        }
+                    }
                     self.heapify_down(heap_index);
                 }
             }
         }
     }
 
-    /// Create a new PriorityQueue from an iterator of key-priority pairs.
+    /// Create a new `PriorityQueue` from an iterator of key-priority pairs.
     /// This function is unsafe because it assumes that the iterator will not contain keys larger
     /// than the size hint from the iterator.
     pub fn from_iter_unsafe<I: Iterator<Item = (usize, P)>>(iter: I) -> Self {
-        let (lower, upper_opt) = iter.size_hint();
-        let capacity = if let Some(upper) = upper_opt {
-            upper
-        } else {
-            lower
-        };
-        let mut priority_queue = PriorityQueue::with_capacity(capacity);
-        priority_queue.init_map_none(capacity);
-        priority_queue.fill_from_iter_unsafe(iter);
-        priority_queue
+        let mut pq = Self::default();
+        pq.init_map_none(N);
+        pq.fill_from_iter_unsafe(iter);
+        pq
     }
 }
 
-impl<P> FromIterator<(usize, P)> for PriorityQueue<P>
+impl<P, const N: usize> FromIterator<(usize, P)> for ArrayPriorityQueue<P, N>
 where
     P: Ord + Debug,
 {
-    /// Create a new PriorityQueue from an iterator of key-priority pairs
+    /// Create a new `PriorityQueue` from an iterator of key-priority pairs
     fn from_iter<I: IntoIterator<Item = (usize, P)>>(iter: I) -> Self
     where
         I::IntoIter: Iterator,
     {
-        let iter = iter.into_iter();
-        let (lower, upper_opt) = iter.size_hint();
-        let capacity = if let Some(upper) = upper_opt {
-            upper
-        } else {
-            lower
-        };
-        let mut priority_queue = PriorityQueue::with_capacity(capacity);
-        // Have to use the checked fill_from_iter because the iterator may contain keys larger than
-        // the size hint.
-        priority_queue.fill_from_iter(iter);
-        priority_queue
+        let mut pq = Self::default();
+        pq.fill_from_iter(iter);
+        pq
     }
 }
 
-impl<P, I> From<I> for PriorityQueue<P>
+impl<P, I, const N: usize> From<I> for ArrayPriorityQueue<P, N>
 where
     P: Ord + Debug,
     I: Iterator<Item = (usize, P)>,
 {
     fn from(iter: I) -> Self {
-        PriorityQueue::from_iter(iter)
+        iter.collect()
     }
 }
 
@@ -274,7 +314,7 @@ mod tests {
 
     #[test]
     fn test_default() {
-        let pq: PriorityQueue<i32> = PriorityQueue::default();
+        let pq: ArrayPriorityQueue<i32, 10> = ArrayPriorityQueue::default();
         assert!(pq.is_empty());
         assert_eq!(pq.heap.len(), 0);
         assert_eq!(pq.map.len(), 0);
@@ -282,7 +322,7 @@ mod tests {
 
     #[test]
     fn test_with_capacity() {
-        let pq: PriorityQueue<i32> = PriorityQueue::with_capacity(5);
+        let pq: ArrayPriorityQueue<i32, 5> = ArrayPriorityQueue::default();
         assert!(pq.is_empty());
         assert_eq!(pq.heap.len(), 0);
         assert_eq!(pq.map.len(), 0);
@@ -290,7 +330,7 @@ mod tests {
 
     #[test]
     fn test_insert_and_pop() {
-        let mut pq = PriorityQueue::default();
+        let mut pq: ArrayPriorityQueue<i32, 10> = ArrayPriorityQueue::default();
         pq.insert((1, 10));
         pq.insert((2, 5));
         pq.insert((3, 20));
@@ -302,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_heapify_up() {
-        let mut pq = PriorityQueue::default();
+        let mut pq: ArrayPriorityQueue<i32, 10> = ArrayPriorityQueue::default();
         pq.insert((2, 20));
         pq.insert((1, 10));
         pq.insert((3, 5));
@@ -313,7 +353,7 @@ mod tests {
 
     #[test]
     fn test_heapify_down() {
-        let mut pq = PriorityQueue::default();
+        let mut pq: ArrayPriorityQueue<i32, 10> = ArrayPriorityQueue::default();
         pq.insert((1, 10));
         pq.insert((2, 5));
         pq.insert((3, 20));
@@ -326,7 +366,7 @@ mod tests {
 
     #[test]
     fn test_peek() {
-        let mut pq = PriorityQueue::default();
+        let mut pq: ArrayPriorityQueue<i32, 10> = ArrayPriorityQueue::default();
         pq.insert((1, 10));
         pq.insert((2, 5));
         assert_eq!(pq.peek(), Some((1, &10)));
@@ -334,7 +374,7 @@ mod tests {
 
     #[test]
     fn test_len() {
-        let mut pq = PriorityQueue::default();
+        let mut pq: ArrayPriorityQueue<i32, 10> = ArrayPriorityQueue::default();
         assert_eq!(pq.len(), 0);
         pq.insert((1, 10));
         assert_eq!(pq.len(), 1);
@@ -347,7 +387,7 @@ mod tests {
     #[test]
     fn test_from_iter() {
         let items = vec![(3, 20), (1, 10), (2, 5)];
-        let mut pq: PriorityQueue<i32> = PriorityQueue::from(items.into_iter());
+        let mut pq: ArrayPriorityQueue<i32, 10> = ArrayPriorityQueue::from(items.into_iter());
         assert_eq!(pq.pop(), Some((3, 20)));
         assert_eq!(pq.pop(), Some((1, 10)));
         assert_eq!(pq.pop(), Some((2, 5)));

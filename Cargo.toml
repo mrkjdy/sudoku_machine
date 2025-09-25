@@ -8,6 +8,7 @@ authors = ["Mark Judy"]
 repository = "https://github.com/mrkjdy/sudoku_machine"
 
 [dependencies]
+arrayvec = "0.7.6"
 bevy = "0.16"
 dark-light = "2.0"
 fastrand = "2.1.1"
@@ -62,5 +63,5 @@ strip = "debuginfo"
 
 
 [[bench]]
-name = "classic"
+name = "classic_bench"
 harness = false
