@@ -58,7 +58,7 @@ fn cell_bundle(options: CellBundleOptions) -> impl Bundle {
     } = options;
     let value_string = match cell_value {
         Some(value) => value.to_string(),
-        None => "".to_string(),
+        None => String::new(),
     };
 
     (
@@ -117,6 +117,7 @@ fn row_bundle(options: RowBundleOptions) -> impl Bundle {
     )
 }
 
+#[must_use] 
 pub fn classic_puzzle_bundle(grid: ClassicGrid) -> impl Bundle {
     let font_size = 40.0;
 

@@ -27,7 +27,7 @@ impl<'a> Iterator for ColIter<'a> {
 
     /// Iterate over the cells in a column of the grid.
     fn next(&mut self) -> Option<Self::Item> {
-        if self.row >= NUM_ROWS as u8 {
+        if self.row as usize >= NUM_ROWS {
             return None;
         }
         let val = &self.grid.0[self.row as usize][self.col as usize];

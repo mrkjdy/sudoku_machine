@@ -53,5 +53,5 @@ fn game_setup(
         PuzzleType::Knight => {
             commands.spawn(game_container_bundle);
         }
-    };
+    }
 }
