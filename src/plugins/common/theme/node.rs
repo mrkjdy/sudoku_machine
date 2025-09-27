@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::Theme;
+use super::{focus::FocusOutline, Theme};
 
 #[derive(Component, Default)]
 pub struct ThemedBackgroundColor;
@@ -30,7 +30,10 @@ pub fn themed_node_plugin(app: &mut App) {
 fn theme_changed_system(
     theme: Res<Theme>,
     mut background_color_query: Query<&mut BackgroundColor, With<ThemedBackgroundColor>>,
-    mut border_color_query: Query<&mut BorderColor, With<ThemedBorderColor>>,
+    mut border_color_query: Query<
+        (&mut BorderColor, Option<&FocusOutline>),
+        With<ThemedBorderColor>,
+    >,
     mut border_radius_query: Query<&mut BorderRadius, With<ThemedBorderRadius>>,
     mut node_query: Query<&mut Node, With<ThemedBorderRect>>,
 ) {
@@ -38,8 +41,11 @@ fn theme_changed_system(
         *background_color = theme.button_normal_background;
     }
 
-    for mut border_color in &mut border_color_query {
-        *border_color = theme.border_color;
+    for (mut border_color, focus_outline) in &mut border_color_query {
+        let default_color = focus_outline
+            .map(|outline| outline.normal)
+            .unwrap_or(theme.border_color.0);
+        *border_color = BorderColor(default_color);
     }
 
     for mut border_radius in &mut border_radius_query {
@@ -62,10 +68,16 @@ fn themed_background_color_added_system(
 
 fn themed_border_color_added_system(
     theme: Res<Theme>,
-    mut border_color_query: Query<&mut BorderColor, Added<ThemedBorderColor>>,
+    mut border_color_query: Query<
+        (&mut BorderColor, Option<&FocusOutline>),
+        Added<ThemedBorderColor>,
+    >,
 ) {
-    for mut border_color in &mut border_color_query {
-        *border_color = theme.border_color;
+    for (mut border_color, focus_outline) in &mut border_color_query {
+        let default_color = focus_outline
+            .map(|outline| outline.normal)
+            .unwrap_or(theme.border_color.0);
+        *border_color = BorderColor(default_color);
     }
 }
 
