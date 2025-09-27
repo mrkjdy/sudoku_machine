@@ -61,7 +61,6 @@ opt-level = "s"
 # Strip all debugging information from the binary to slightly reduce file size.
 strip = "debuginfo"
 
-
 [[bench]]
 name = "classic_bench"
 harness = false
