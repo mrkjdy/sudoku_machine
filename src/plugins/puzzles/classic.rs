@@ -117,7 +117,7 @@ fn row_bundle(options: RowBundleOptions) -> impl Bundle {
     )
 }
 
-#[must_use] 
+#[must_use]
 pub fn classic_puzzle_bundle(grid: ClassicGrid) -> impl Bundle {
     let font_size = 40.0;
 

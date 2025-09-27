@@ -31,7 +31,7 @@ pub enum PuzzleType {
 }
 
 impl PuzzleType {
-    #[must_use] 
+    #[must_use]
     pub fn title(&self) -> &'static str {
         match self {
             PuzzleType::Classic => ClassicPuzzle::title(),
@@ -40,7 +40,7 @@ impl PuzzleType {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn description(&self) -> &'static str {
         match self {
             PuzzleType::Classic => ClassicPuzzle::description(),
