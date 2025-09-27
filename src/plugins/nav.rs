@@ -11,6 +11,7 @@ use super::common::theme::{
 pub fn nav_plugin(app: &mut App) {
     app.init_state::<NavState>()
         .add_systems(Startup, nav_setup)
+        .add_systems(Update, nav_visibility_system)
         .add_systems(Update, nav_icon_system.run_if(state_changed::<NavState>))
         .add_systems(Update, nav_button_action);
 }
@@ -18,8 +19,8 @@ pub fn nav_plugin(app: &mut App) {
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq, States, Display)]
 pub enum NavState {
     #[default]
-    #[strum(to_string = "🞨")]
-    Exit,
+    #[strum(to_string = " ")]
+    Hidden,
     #[strum(to_string = "🡠")]
     Back,
     #[strum(to_string = "⏸")]
@@ -38,7 +39,8 @@ impl From<NavState> for String {
     ThemedBackgroundColor,
     ThemedBorderColor,
     ThemedBorderRadius,
-    ThemedBorderRect
+    ThemedBorderRect,
+    Visibility
 )]
 struct NavButton;
 
@@ -73,6 +75,7 @@ fn nav_setup(mut commands: Commands) {
             height: Val::Px(60.0),
             ..default()
         },
+        Visibility::Visible,
         children![nav_button_icon_bundle],
     ));
 }
@@ -89,7 +92,6 @@ fn nav_button_action(
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<NavButton>)>,
     nav_state: Res<State<NavState>>,
     mut screen_state: ResMut<NextState<ScreenState>>,
-    mut app_exit_events: EventWriter<AppExit>,
 ) {
     for _ in interaction_query
         .iter()
@@ -99,12 +101,22 @@ fn nav_button_action(
             NavState::Back => {
                 screen_state.set(ScreenState::Home);
             }
-            NavState::Exit => {
-                app_exit_events.write(AppExit::Success);
-            }
+            NavState::Hidden => {}
             NavState::Pause => {
                 screen_state.set(ScreenState::Home);
             }
         }
     }
+}
+
+fn nav_visibility_system(
+    mut nav_button_query: Query<&mut Visibility, With<NavButton>>,
+    nav_state: Res<State<NavState>>,
+) {
+    let mut visibility = nav_button_query.single_mut().unwrap();
+    *visibility = if matches!(nav_state.get(), NavState::Hidden) {
+        Visibility::Hidden
+    } else {
+        Visibility::Visible
+    };
 }
