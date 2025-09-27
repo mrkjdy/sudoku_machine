@@ -61,10 +61,6 @@ opt-level = "s"
 # Strip all debugging information from the binary to slightly reduce file size.
 strip = "debuginfo"
 
-# TODO: remove this once objc2 is upgraded in bevy and other dependencies
-[profile.dev.package.objc2]
-debug-assertions = false
-
 [[bench]]
 name = "classic_bench"
 harness = false
