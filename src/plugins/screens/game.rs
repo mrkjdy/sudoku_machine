@@ -1,7 +1,11 @@
-use bevy::prelude::*;
+use bevy::{ecs::schedule::common_conditions::resource_exists, prelude::*};
 
 use crate::{
-    plugins::{despawn_component, nav::NavState, puzzles::classic::classic_puzzle_bundle},
+    plugins::{
+        despawn_component,
+        nav::NavState,
+        puzzles::classic::{classic_cell_input_system, classic_puzzle_bundle, ClassicGridState},
+    },
     puzzles::{classic::puzzle::ClassicPuzzle, PuzzleType},
 };
 
@@ -14,7 +18,13 @@ pub fn game_plugin(app: &mut App) {
     app.add_systems(OnEnter(ScreenState::Game), game_setup)
         .add_systems(
             OnExit(ScreenState::Game),
-            despawn_component::<GameContainer>,
+            (despawn_component::<GameContainer>, clear_classic_grid_state),
+        )
+        .add_systems(
+            Update,
+            classic_cell_input_system
+                .run_if(in_state(ScreenState::Game))
+                .run_if(resource_exists::<ClassicGridState>),
         );
 }
 
@@ -44,7 +54,9 @@ fn game_setup(
     match puzzle_settings.puzzle_type {
         PuzzleType::Classic => {
             let puzzle = ClassicPuzzle::from_seed(&puzzle_settings.seed);
-            let puzzle_bundle = classic_puzzle_bundle(puzzle.grid);
+            let grid = puzzle.grid;
+            commands.insert_resource(ClassicGridState::new(grid));
+            let puzzle_bundle = classic_puzzle_bundle(grid);
             commands.spawn((game_container_bundle, children![puzzle_bundle]));
         }
         PuzzleType::FullKropki => {
@@ -54,4 +66,8 @@ fn game_setup(
             commands.spawn(game_container_bundle);
         }
     }
+}
+
+fn clear_classic_grid_state(mut commands: Commands) {
+    commands.remove_resource::<ClassicGridState>();
 }
