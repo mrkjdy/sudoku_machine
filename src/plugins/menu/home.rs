@@ -50,7 +50,7 @@ enum HomeMenuButton {
 }
 
 fn home_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Commands) {
-    nav_state.set(NavState::Exit);
+    nav_state.set(NavState::Hidden);
 
     let title_bundle = (
         Text::new(APP_TITLE),
