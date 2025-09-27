@@ -15,7 +15,7 @@ fn main() {
                 title: APP_TITLE.into(),
                 present_mode: PresentMode::AutoVsync,
                 #[cfg(not(target_family = "wasm"))]
-                mode: WindowMode::BorderlessFullscreen(MonitorSelection::Current),
+                mode: WindowMode::BorderlessFullscreen(MonitorSelection::Primary),
                 // Tells bevy to use the system theme
                 window_theme: None,
                 // Tells Wasm to resize the window according to the available canvas

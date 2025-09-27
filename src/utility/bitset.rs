@@ -52,12 +52,16 @@ impl BitSet16 {
 
     /// Returns the number of elements in the bitset.
     ///
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn len(&self) -> u8 {
+        // There are only up to 16 1s in a u16, so no truncation can occur here.
         self.0.count_ones() as u8
     }
 
     /// Returns an iterator over the numbers in the bitset.
     ///
+    #[must_use]
     pub fn iter(&self) -> BitSet16Iter<'_> {
         BitSet16Iter { set: self, bit: 0 }
     }
@@ -68,7 +72,7 @@ impl BitSet16 {
     ///
     /// * `bit` - The position of the bit to get.
     ///
-    fn get_bit(&self, bit: u8) -> u16 {
+    fn get_bit(self, bit: u8) -> u16 {
         self.0 & Self::mask(bit)
     }
 
@@ -78,7 +82,7 @@ impl BitSet16 {
     ///
     /// * `bit` - The position of the bit to check.
     ///
-    fn bit_is_one(&self, bit: u8) -> bool {
+    fn bit_is_one(self, bit: u8) -> bool {
         self.get_bit(bit) != 0
     }
 
@@ -88,6 +92,7 @@ impl BitSet16 {
     ///
     /// * `num` - The number to check for presence in the bitset. Should be in the range 1..=16.
     ///
+    #[must_use]
     pub fn has(&self, num: u8) -> bool {
         self.bit_is_one(Self::num_to_bit(num))
     }
@@ -99,7 +104,7 @@ impl BitSet16 {
     /// * `bit` - The position of the bit to be set.
     ///
     fn set_bit(&mut self, bit: u8) {
-        self.0 |= Self::mask(bit)
+        self.0 |= Self::mask(bit);
     }
 
     /// Inserts a number into the bitset, setting the corresponding bit to one.
@@ -111,7 +116,7 @@ impl BitSet16 {
     /// * `num` - The number to insert into the bitset. Should be in the range 1..=16.
     ///
     pub fn insert(&mut self, num: u8) {
-        self.set_bit(Self::num_to_bit(num))
+        self.set_bit(Self::num_to_bit(num));
     }
 
     /// Clears the bit at the specified position, setting it to zero.
@@ -121,7 +126,7 @@ impl BitSet16 {
     /// * `bit` - The position of the bit to clear.
     ///
     fn clear_bit(&mut self, bit: u8) {
-        self.0 &= !Self::mask(bit)
+        self.0 &= !Self::mask(bit);
     }
 
     /// Removes a number from the bitset, setting the corresponding bit to zero.
@@ -133,7 +138,7 @@ impl BitSet16 {
     /// * `num` - The number to remove from the bitset. Should be in the range 1..=16.
     ///
     pub fn remove(&mut self, num: u8) {
-        self.clear_bit(Self::num_to_bit(num))
+        self.clear_bit(Self::num_to_bit(num));
     }
 
     /// Computes the intersection of two `BitSet16` instances, returning a new bitset.
@@ -145,10 +150,12 @@ impl BitSet16 {
     ///
     /// * `other` - The other `BitSet16` to intersect with.
     ///
+    #[must_use]
     pub fn intersection(&self, other: &Self) -> Self {
         Self(self.0 & other.0)
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -185,6 +192,14 @@ impl Iterator for BitSet16Iter<'_> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         let length = self.set.len() as usize;
         (length, Some(length))
+    }
+}
+
+impl<'a> IntoIterator for &'a BitSet16 {
+    type Item = u8;
+    type IntoIter = BitSet16Iter<'a>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 

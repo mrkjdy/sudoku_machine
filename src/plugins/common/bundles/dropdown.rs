@@ -229,6 +229,7 @@ pub struct DropdownBundleOptions {
     pub list_node: Node,
 }
 
+#[must_use]
 pub fn dropdown_bundle(options: DropdownBundleOptions) -> impl Bundle {
     let DropdownBundleOptions {
         options,
@@ -240,11 +241,7 @@ pub fn dropdown_bundle(options: DropdownBundleOptions) -> impl Bundle {
         list_node,
     } = options;
 
-    let initial_text = options
-        .get(selected)
-        .map(|s| s.as_str())
-        .unwrap_or("")
-        .to_string();
+    let initial_text = options.get(selected).map_or("", String::as_str).to_string();
 
     let dropdown_button_bundle = dropdown_button_bundle(DropdownButtonBundleOptions {
         text: initial_text,
@@ -280,7 +277,9 @@ fn dropdown_button_text_system(
         // Set the button text
         let button_text_id = button_children[0];
         let mut button_text = button_text_query.get_mut(button_text_id).unwrap();
-        button_text.0 = dropdown.options[dropdown.selected].clone();
+        button_text
+            .0
+            .clone_from(&dropdown.options[dropdown.selected]);
     }
 }
 
