@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.3.0](https://github.com/mrkjdy/sudoku_machine/compare/v0.2.0...v0.3.0) - 2025-09-29
+
+### Added
+
+- enable webgpu ([#98](https://github.com/mrkjdy/sudoku_machine/pull/98))
+
+### Fixed
+
+- hide nav on home ([#97](https://github.com/mrkjdy/sudoku_machine/pull/97))
+- implement iterative solution visitor, improve perf, fix lint, and various refactors ([#95](https://github.com/mrkjdy/sudoku_machine/pull/95))
+
+### Other
+
+- cargo update ([#96](https://github.com/mrkjdy/sudoku_machine/pull/96))
+- *(deps)* bump wasm-bindgen-futures from 0.4.51 to 0.4.53 ([#94](https://github.com/mrkjdy/sudoku_machine/pull/94))
+- *(deps)* bump wasm-bindgen-futures from 0.4.50 to 0.4.51 ([#92](https://github.com/mrkjdy/sudoku_machine/pull/92))
+- *(deps)* bump actions/upload-pages-artifact from 3 to 4 ([#90](https://github.com/mrkjdy/sudoku_machine/pull/90))
+- *(deps)* bump tracing-subscriber from 0.3.19 to 0.3.20 ([#91](https://github.com/mrkjdy/sudoku_machine/pull/91))
+- *(deps)* bump arboard from 3.6.0 to 3.6.1 ([#89](https://github.com/mrkjdy/sudoku_machine/pull/89))
+- use rust-toolchain.toml ([#88](https://github.com/mrkjdy/sudoku_machine/pull/88))
+- *(deps)* bump actions/checkout from 4 to 5 ([#86](https://github.com/mrkjdy/sudoku_machine/pull/86))
+- *(deps)* bump actions/download-artifact from 4 to 5 ([#85](https://github.com/mrkjdy/sudoku_machine/pull/85))
+
 ## [0.2.0](https://github.com/mrkjdy/sudoku_machine/compare/v0.1.8...v0.2.0) - 2025-08-03
 
 ### Added
