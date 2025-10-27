@@ -32,7 +32,7 @@ arboard = "3.6.1"
 getrandom = { version = "0.3", features = ["wasm_js"] }
 web-sys = { version = "0.3", features = ["Clipboard", "Navigator", "Window"] }
 wasm-bindgen-futures = "0.4"
-bevy_defer = "0.14.0"
+bevy_defer = "0.15.1"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
