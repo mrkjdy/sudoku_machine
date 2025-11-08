@@ -200,7 +200,7 @@ jobs:
           - job_name: Intel
             dmg_name: intel
             target: x86_64-apple-darwin
-            runner: macos-latest
+            runner: macos-15-intel
     runs-on: ${{ matrix.platform.runner }}
     steps:
       - uses: actions/checkout@v5
