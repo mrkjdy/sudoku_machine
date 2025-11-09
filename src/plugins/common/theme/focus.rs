@@ -23,6 +23,12 @@ impl FocusOutline {
     }
 }
 
+impl Default for FocusOutline {
+    fn default() -> Self {
+        Self::transparent()
+    }
+}
+
 #[derive(Resource, Default)]
 pub struct FocusedEntity {
     pub last: Option<Entity>,

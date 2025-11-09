@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use super::{focus::FocusOutline, Theme};
+use crate::plugins::common::bundles::puzzle_cell::PuzzleCellKind;
 
 #[derive(Component, Default)]
 pub struct ThemedBackgroundColor;
@@ -29,7 +30,10 @@ pub fn themed_node_plugin(app: &mut App) {
 
 fn theme_changed_system(
     theme: Res<Theme>,
-    mut background_color_query: Query<&mut BackgroundColor, With<ThemedBackgroundColor>>,
+    mut background_color_query: Query<
+        (&mut BackgroundColor, Option<&PuzzleCellKind>),
+        With<ThemedBackgroundColor>,
+    >,
     mut border_color_query: Query<
         (&mut BorderColor, Option<&FocusOutline>),
         With<ThemedBorderColor>,
@@ -37,8 +41,13 @@ fn theme_changed_system(
     mut border_radius_query: Query<&mut BorderRadius, With<ThemedBorderRadius>>,
     mut node_query: Query<&mut Node, With<ThemedBorderRect>>,
 ) {
-    for mut background_color in &mut background_color_query {
-        *background_color = theme.button_normal_background;
+    for (mut background_color, kind) in &mut background_color_query {
+        let is_given = kind.is_some_and(|k| matches!(k, PuzzleCellKind::Given));
+        *background_color = if is_given {
+            theme.puzzle_given_background
+        } else {
+            theme.button_normal_background
+        };
     }
 
     for (mut border_color, focus_outline) in &mut border_color_query {
@@ -59,10 +68,18 @@ fn theme_changed_system(
 
 fn themed_background_color_added_system(
     theme: Res<Theme>,
-    mut background_color_query: Query<&mut BackgroundColor, Added<ThemedBackgroundColor>>,
+    mut background_color_query: Query<
+        (&mut BackgroundColor, Option<&PuzzleCellKind>),
+        Added<ThemedBackgroundColor>,
+    >,
 ) {
-    for mut background_color in &mut background_color_query {
-        *background_color = theme.button_normal_background;
+    for (mut background_color, kind) in &mut background_color_query {
+        let is_given = kind.is_some_and(|k| matches!(k, PuzzleCellKind::Given));
+        *background_color = if is_given {
+            theme.puzzle_given_background
+        } else {
+            theme.button_normal_background
+        };
     }
 }
 
