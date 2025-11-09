@@ -1,4 +1,11 @@
 [alias]
+# Aliases for release mode
+checkr = "check --release"
+buildr = "build --release"
+runr = "run --release"
+testr = "test --release"
+clippyr = "clippy --release"
+
 # Aliases with dynamic linking enabled
 checkd = "check --features bevy/dynamic_linking"
 buildd = "build --features bevy/dynamic_linking"
