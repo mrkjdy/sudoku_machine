@@ -33,8 +33,8 @@ There are several ways to run the game locally:
 
 These commands use [`wasm-bindgen-cli`](https://github.com/wasm-bindgen/wasm-bindgen) and [`wasm-server-runner`](https://github.com/jakobhellermann/wasm-server-runner). You can install them with:
 
-```
-cargo install -f wasm-bindgen-cli --version <wasm-bindgen version> wasm-server-runner
+```bash
+cargo install -f wasm-bindgen-cli@<wasm-bindgen version> wasm-server-runner
 ```
 
 Check the version of `wasm-bindgen` installed in [Cargo.lock](Cargo.lock) to determine which version of `wasm-bindgen-cli` to install. It's important to reinstall `wasm-server-runner` when updating `wasm-bindgen-cli` because `wasm-server-runner` builds using your installed version of `wasm-bindgen`.
