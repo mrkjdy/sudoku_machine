@@ -1,5 +1,7 @@
 use classic::puzzle::ClassicPuzzle;
+#[cfg(debug_assertions)]
 use full_kropki::FullKropkiPuzzle;
+#[cfg(debug_assertions)]
 use knight::KnightPuzzle;
 use num_enum::TryFromPrimitive;
 use strum_macros::EnumIter;
@@ -26,7 +28,9 @@ pub trait PuzzleMeta {
 pub enum PuzzleType {
     #[default]
     Classic,
+    #[cfg(debug_assertions)]
     FullKropki,
+    #[cfg(debug_assertions)]
     Knight,
 }
 
@@ -35,7 +39,9 @@ impl PuzzleType {
     pub fn title(&self) -> &'static str {
         match self {
             PuzzleType::Classic => ClassicPuzzle::title(),
+            #[cfg(debug_assertions)]
             PuzzleType::FullKropki => FullKropkiPuzzle::title(),
+            #[cfg(debug_assertions)]
             PuzzleType::Knight => KnightPuzzle::title(),
         }
     }
@@ -44,7 +50,9 @@ impl PuzzleType {
     pub fn description(&self) -> &'static str {
         match self {
             PuzzleType::Classic => ClassicPuzzle::description(),
+            #[cfg(debug_assertions)]
             PuzzleType::Knight => KnightPuzzle::description(),
+            #[cfg(debug_assertions)]
             PuzzleType::FullKropki => FullKropkiPuzzle::description(),
         }
     }

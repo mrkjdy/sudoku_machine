@@ -15,6 +15,8 @@ jobs:
   build-wasm:
     name: Build Wasm
     runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_DIR: target/wasm32-unknown-unknown
     steps:
       - uses: actions/checkout@v5
       - name: Install Rust toolchain
@@ -22,13 +24,17 @@ jobs:
         with:
           profile: minimal
           targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}-wasm32-unknown-unknown
+          cache-on-failure: true
       - name: install wasm-bindgen-cli
         run: |
-          cargo install wasm-bindgen-cli
+          cargo install --locked wasm-bindgen-cli
 
       - name: Build
         run: |
-          cargo build --release --target wasm32-unknown-unknown
+          cargo build --release --target wasm32-unknown-unknown --features bevy/webgpu
 
       - name: Prepare package
         if: ${{ github.event_name == 'release' }}
@@ -48,7 +54,7 @@ jobs:
 
       - name: Upload binaries to artifacts
         if: ${{ github.event_name == 'release' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           path: ${{ env.package_name }}.zip
           name: wasm
@@ -79,7 +85,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions/configure-pages@v5
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         id: download-artifact
         with:
           name: wasm
@@ -93,6 +99,8 @@ jobs:
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_DIR: target/x86_64-unknown-linux-gnu
     steps:
       - uses: actions/checkout@v5
       - name: Install Rust toolchain
@@ -100,6 +108,10 @@ jobs:
         with:
           profile: minimal
           targets: x86_64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}-x86_64-unknown-linux-gnu
+          cache-on-failure: true
       - name: install dependencies
         run: |
           sudo apt-get update
@@ -126,7 +138,7 @@ jobs:
 
       - name: Upload binaries to artifacts
         if: ${{ github.event_name == 'release' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           path: ${{ env.package_name }}.zip
           name: linux
@@ -145,6 +157,8 @@ jobs:
   build-windows:
     name: Build Windows
     runs-on: windows-latest
+    env:
+      CARGO_TARGET_DIR: target/x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v5
       - name: Install Rust toolchain
@@ -152,6 +166,10 @@ jobs:
         with:
           profile: minimal
           targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}-x86_64-pc-windows-msvc
+          cache-on-failure: true
 
       - name: Build
         run: |
@@ -172,7 +190,7 @@ jobs:
 
       - name: Upload binaries to artifacts
         if: ${{ github.event_name == 'release' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           path: ${{ env.package_name }}.zip
           name: windows
@@ -200,8 +218,10 @@ jobs:
           - job_name: Intel
             dmg_name: intel
             target: x86_64-apple-darwin
-            runner: macos-13
+            runner: macos-15-intel
     runs-on: ${{ matrix.platform.runner }}
+    env:
+      CARGO_TARGET_DIR: target/${{ matrix.platform.target }}
     steps:
       - uses: actions/checkout@v5
       - name: Install Rust toolchain
@@ -209,6 +229,10 @@ jobs:
         with:
           profile: minimal
           targets: ${{ matrix.platform.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}-${{ matrix.platform.target }}
+          cache-on-failure: true
 
       - name: Build
         run: |
@@ -302,7 +326,7 @@ jobs:
 
       - name: Upload binaries to artifacts
         if: ${{ github.event_name == 'release' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           path: ${{ env.package_name }}-macOS-${{ matrix.platform.dmg_name }}.dmg
           name: macOS-${{ matrix.platform.dmg_name }}
