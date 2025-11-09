@@ -9,7 +9,7 @@ repository = "https://github.com/mrkjdy/sudoku_machine"
 
 [dependencies]
 arrayvec = "0.7.6"
-bevy = "0.16"
+bevy = "0.17"
 dark-light = "2.0"
 fastrand = "2.1.1"
 indoc = "2.0.7"
