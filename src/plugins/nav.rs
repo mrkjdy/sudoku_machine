@@ -1,19 +1,33 @@
-use bevy::prelude::*;
+use bevy::{
+    app::AppExit,
+    input::{keyboard::Key, keyboard::KeyboardInput, ButtonState},
+    prelude::*,
+};
 use strum_macros::Display;
 
-use crate::{plugins::menu::MenuState, AppState};
+use crate::plugins::screens::ScreenState;
 
 use super::common::theme::{
     node::{ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect},
     text::{ThemedFontWeight, ThemedTextColor},
 };
 
+use crate::plugins::common::theme::focus::FocusedEntity;
+
+#[derive(Resource, Default)]
+pub struct EscapeNavState {
+    pub focus_cleared_this_frame: bool,
+}
+
 pub fn nav_plugin(app: &mut App) {
     app.init_state::<NavState>()
+        .init_resource::<EscapeNavState>()
         .add_systems(Startup, nav_setup)
         .add_systems(Update, nav_visibility_system)
         .add_systems(Update, nav_icon_system.run_if(state_changed::<NavState>))
-        .add_systems(Update, nav_button_action);
+        .add_systems(Update, nav_button_action)
+        .add_systems(Update, nav_escape_system)
+        .add_systems(PostUpdate, reset_escape_nav_state);
 }
 
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq, States, Display)]
@@ -91,8 +105,7 @@ fn nav_icon_system(
 fn nav_button_action(
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<NavButton>)>,
     nav_state: Res<State<NavState>>,
-    mut menu_state: ResMut<NextState<MenuState>>,
-    mut app_state: ResMut<NextState<AppState>>,
+    mut screen_state: ResMut<NextState<ScreenState>>,
 ) {
     for _ in interaction_query
         .iter()
@@ -100,11 +113,11 @@ fn nav_button_action(
     {
         match *nav_state.get() {
             NavState::Back => {
-                menu_state.set(MenuState::Home);
+                screen_state.set(ScreenState::Home);
             }
             NavState::Hidden => {}
             NavState::Pause => {
-                app_state.set(AppState::Menu);
+                screen_state.set(ScreenState::Home);
             }
         }
     }
@@ -120,4 +133,44 @@ fn nav_visibility_system(
     } else {
         Visibility::Visible
     };
+}
+
+fn nav_escape_system(
+    mut keyboard_input_events: EventReader<KeyboardInput>,
+    focused: Option<Res<FocusedEntity>>,
+    escape_state: Res<EscapeNavState>,
+    current_screen: Option<Res<State<ScreenState>>>,
+    mut next_screen: Option<ResMut<NextState<ScreenState>>>,
+    mut commands: Commands,
+) {
+    let escape_pressed = keyboard_input_events.read().any(|event| {
+        event.state == ButtonState::Pressed && matches!(event.logical_key, Key::Escape)
+    });
+
+    if !escape_pressed || escape_state.focus_cleared_this_frame {
+        return;
+    }
+
+    if focused.as_ref().and_then(|f| f.current).is_some() {
+        return;
+    }
+
+    if let Some(screen_state) = current_screen.as_ref() {
+        match screen_state.get() {
+            ScreenState::Home => {
+                commands.queue(|world: &mut World| {
+                    world.send_event(AppExit::Success);
+                });
+            }
+            _ => {
+                if let Some(ref mut next) = next_screen {
+                    next.set(ScreenState::Home);
+                }
+            }
+        }
+    }
+}
+
+fn reset_escape_nav_state(mut escape_state: ResMut<EscapeNavState>) {
+    escape_state.focus_cleared_this_frame = false;
 }
