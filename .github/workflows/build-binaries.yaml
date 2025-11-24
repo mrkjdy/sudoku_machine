@@ -18,7 +18,7 @@ jobs:
     env:
       CARGO_TARGET_DIR: target/wasm32-unknown-unknown
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install Rust toolchain
         uses: ./.github/actions/install-rust-toolchain
         with:
@@ -83,7 +83,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/configure-pages@v5
       - uses: actions/download-artifact@v6
         id: download-artifact
@@ -102,7 +102,7 @@ jobs:
     env:
       CARGO_TARGET_DIR: target/x86_64-unknown-linux-gnu
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install Rust toolchain
         uses: ./.github/actions/install-rust-toolchain
         with:
@@ -160,7 +160,7 @@ jobs:
     env:
       CARGO_TARGET_DIR: target/x86_64-pc-windows-msvc
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install Rust toolchain
         uses: ./.github/actions/install-rust-toolchain
         with:
@@ -223,7 +223,7 @@ jobs:
     env:
       CARGO_TARGET_DIR: target/${{ matrix.platform.target }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install Rust toolchain
         uses: ./.github/actions/install-rust-toolchain
         with:
