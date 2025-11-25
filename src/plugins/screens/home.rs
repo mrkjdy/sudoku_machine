@@ -3,7 +3,6 @@ use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter};
 
 use crate::{
-    despawn_component,
     plugins::{
         common::theme::{
             node::{
@@ -11,21 +10,22 @@ use crate::{
             },
             text::{ThemedFontWeight, ThemedTextColor},
         },
+        despawn_component,
         nav::NavState,
     },
-    AppState, APP_TITLE,
+    APP_TITLE,
 };
 
-use super::{MenuState, PIXELS_PER_CH};
+use super::{ScreenState, PIXELS_PER_CH};
 
 pub fn home_menu_plugin(app: &mut App) {
-    app.add_systems(OnEnter(MenuState::Home), home_menu_setup)
+    app.add_systems(OnEnter(ScreenState::Home), home_menu_setup)
         .add_systems(
             Update,
-            (home_menu_action_system).run_if(in_state(MenuState::Home)),
+            (home_menu_action_system).run_if(in_state(ScreenState::Home)),
         )
         .add_systems(
-            OnExit(MenuState::Home),
+            OnExit(ScreenState::Home),
             despawn_component::<HomeMenuContainer>,
         );
 }
@@ -65,7 +65,7 @@ fn home_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Com
 
     let button_bundles = HomeMenuButton::iter().map(|home_menu_button| {
         let button_text_bundle = (
-            ThemedFontWeight::Bold,
+            ThemedFontWeight::Regular,
             ThemedTextColor,
             Text::new(home_menu_button.to_string()),
             TextFont::from_font_size(40.0),
@@ -101,8 +101,7 @@ fn home_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Com
 
 fn home_menu_action_system(
     interaction_query: Query<(&Interaction, &HomeMenuButton), Changed<Interaction>>,
-    mut menu_state: ResMut<NextState<MenuState>>,
-    mut app_state: ResMut<NextState<AppState>>,
+    mut screen_state: ResMut<NextState<ScreenState>>,
 ) {
     for (_, menu_button) in interaction_query
         .iter()
@@ -110,14 +109,13 @@ fn home_menu_action_system(
     {
         match menu_button {
             HomeMenuButton::Continue => {
-                app_state.set(AppState::Game);
-                menu_state.set(MenuState::Disabled);
+                screen_state.set(ScreenState::Game);
             }
             HomeMenuButton::History => {
-                menu_state.set(MenuState::History);
+                screen_state.set(ScreenState::History);
             }
             HomeMenuButton::NewPuzzle => {
-                menu_state.set(MenuState::NewPuzzle);
+                screen_state.set(ScreenState::NewPuzzle);
             }
         }
     }

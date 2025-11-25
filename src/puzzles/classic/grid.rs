@@ -1,7 +1,15 @@
 use std::fmt::{Display, Write};
 
+use arrayvec::ArrayVec;
+
+use crate::puzzles::Grid;
+
+pub const NUM_COLS: usize = 9;
+pub const NUM_ROWS: usize = 9;
+pub const BOX_SIZE: usize = 3;
+
 #[derive(Clone, Copy, Debug, Default)]
-pub struct ClassicGrid([[Option<u8>; 9]; 9]);
+pub struct ClassicGrid(pub Grid<NUM_COLS, NUM_ROWS>);
 
 pub struct ColIter<'a> {
     grid: &'a ClassicGrid,
@@ -22,7 +30,7 @@ impl<'a> Iterator for ColIter<'a> {
 
     /// Iterate over the cells in a column of the grid.
     fn next(&mut self) -> Option<Self::Item> {
-        if self.row >= 9 {
+        if self.row as usize >= NUM_ROWS {
             return None;
         }
         let val = &self.grid.0[self.row as usize][self.col as usize];
@@ -67,6 +75,8 @@ impl<'a> Iterator for BoxIter<'a> {
     }
 }
 
+pub const CLASSIC_NEIGHBOR_CAPACITY: usize = 20;
+
 impl ClassicGrid {
     /// Iterate over all cells in the grid.
     pub fn iter_all(&self) -> impl Iterator<Item = &Option<u8>> {
@@ -88,6 +98,50 @@ impl ClassicGrid {
     #[must_use]
     pub fn iter_box(&self, box_index: u8) -> BoxIter<'_> {
         BoxIter::new(self, box_index)
+    }
+
+    /// Iterate over all neighboring positions (row, column, and box) for a cell.
+    pub fn neighbor_positions(row: usize, col: usize) -> impl Iterator<Item = (usize, usize)> {
+        debug_assert!(row < NUM_ROWS && col < NUM_COLS);
+
+        let mut neighbors: ArrayVec<(usize, usize), CLASSIC_NEIGHBOR_CAPACITY> = ArrayVec::new();
+
+        for c in 0..NUM_COLS {
+            if c != col {
+                neighbors.push((row, c));
+            }
+        }
+
+        for r in 0..NUM_ROWS {
+            if r != row {
+                neighbors.push((r, col));
+            }
+        }
+
+        let box_row_start = (row / BOX_SIZE) * BOX_SIZE;
+        let box_col_start = (col / BOX_SIZE) * BOX_SIZE;
+        for local_row in 0..BOX_SIZE {
+            for local_col in 0..BOX_SIZE {
+                let r = box_row_start + local_row;
+                let c = box_col_start + local_col;
+                if r == row || c == col {
+                    continue;
+                }
+                neighbors.push((r, c));
+            }
+        }
+
+        neighbors.into_iter()
+    }
+
+    /// Iterate over the neighboring cells for a cell, yielding their positions and values.
+    pub fn iter_neighbors(
+        &self,
+        row: usize,
+        col: usize,
+    ) -> impl Iterator<Item = ((usize, usize), &Option<u8>)> + '_ {
+        let grid = &self.0;
+        Self::neighbor_positions(row, col).map(move |(r, c)| ((r, c), &grid[r][c]))
     }
 
     /// Get the value of a cell in the grid by its row and column indices.
@@ -176,6 +230,7 @@ impl PartialEq for ClassicGrid {
 mod tests {
     use super::*;
     use indoc::indoc;
+    use std::collections::HashSet;
 
     const GRID_NUMS: [[u8; 9]; 9] = [
         [5, 3, 0, 0, 7, 0, 0, 0, 0],
@@ -221,6 +276,39 @@ mod tests {
         let grid = ClassicGrid::from(GRID_NUMS);
         for (i, cell) in grid.iter_all().enumerate() {
             assert_eq!(cell, &grid.get_by_cell_index(i as u8));
+        }
+    }
+
+    #[test]
+    fn test_neighbor_positions_center() {
+        let mut neighbors: Vec<_> = ClassicGrid::neighbor_positions(4, 4).collect();
+        neighbors.sort_unstable();
+        neighbors.dedup();
+        assert_eq!(neighbors.len(), 20);
+        assert!(!neighbors.contains(&(4, 4)));
+    }
+
+    #[test]
+    fn test_neighbor_positions_corner_unique() {
+        let neighbors: Vec<_> = ClassicGrid::neighbor_positions(0, 0).collect();
+        let unique: HashSet<_> = neighbors.iter().copied().collect();
+        assert_eq!(neighbors.len(), 20);
+        assert_eq!(neighbors.len(), unique.len());
+        assert!(unique.contains(&(1, 1)));
+        assert!(unique.contains(&(2, 2)));
+    }
+
+    #[test]
+    fn test_iter_neighbors_matches_grid_values() {
+        let grid = ClassicGrid::from(GRID_NUMS);
+        let mut neighbors: Vec<_> = grid
+            .iter_neighbors(4, 4)
+            .map(|((row, col), value)| (row, col, *value))
+            .collect();
+        neighbors.sort_unstable();
+        assert_eq!(neighbors.len(), 20);
+        for (row, col, value) in neighbors {
+            assert_eq!(value, grid.get_by_row_col((row as u8, col as u8)));
         }
     }
 }

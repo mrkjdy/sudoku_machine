@@ -11,9 +11,9 @@ pub fn dropdown_plugin(app: &mut App) {
         Update,
         (
             dropdown_button_text_system,
-            dropdown_button_icon_system,
-            dropdown_list_visibility_system,
             dropdown_list_selection_system,
+            dropdown_list_visibility_system,
+            dropdown_button_icon_system,
             dropdown_list_position_system,
         ),
     );
@@ -309,24 +309,30 @@ fn dropdown_button_icon_system(
 }
 
 fn dropdown_list_visibility_system(
-    buttons: Res<ButtonInput<MouseButton>>,
-    button_query: Query<(&Interaction, &ChildOf), With<DropdownButton>>,
+    button_query: Query<(&Interaction, &ChildOf), (Changed<Interaction>, With<DropdownButton>)>,
     container_query: Query<&Children, With<DropdownContainer>>,
     mut list_query: Query<&mut Visibility, With<DropdownList>>,
+    changed_containers: Query<Entity, (With<DropdownContainer>, Changed<DropdownContainer>)>,
 ) {
-    if buttons.get_just_pressed().len() == 0 {
-        return;
+    for container_entity in changed_containers.iter() {
+        if let Ok(children) = container_query.get(container_entity) {
+            if let Ok(mut visibility) = list_query.get_mut(children[1]) {
+                *visibility = Visibility::Hidden;
+            }
+        }
     }
+
     for (&button_interaction, button_childof) in button_query.iter() {
+        if button_interaction != Interaction::Pressed {
+            continue;
+        }
         // Get the list
         let container_id = button_childof.parent();
         let container_children = container_query.get(container_id).unwrap();
         let list_id = container_children[1];
         let mut list_visibility = list_query.get_mut(list_id).unwrap();
         // Set the list visibility
-        *list_visibility = if button_interaction == Interaction::Pressed
-            && *list_visibility == Visibility::Hidden
-        {
+        *list_visibility = if *list_visibility == Visibility::Hidden {
             Visibility::Visible
         } else {
             Visibility::Hidden
@@ -355,15 +361,17 @@ fn dropdown_list_selection_system(
         let (dropdown_list_childof, list_items) = list_query.get(list_id).unwrap();
         let dropdown_list_parent_id = dropdown_list_childof.parent();
         let mut dropdown_container = container_query.get_mut(dropdown_list_parent_id).unwrap();
-        // Remove the selected icon from the previous option
-        let previous_list_item_id = list_items[dropdown_container.selected];
-        let previous_list_item_children =
-            previous_list_item_query.get(previous_list_item_id).unwrap();
-        let previous_list_item_icon_id = previous_list_item_children[1];
-        let mut previous_list_item_icon = list_item_icon_query
-            .get_mut(previous_list_item_icon_id)
-            .unwrap();
-        previous_list_item_icon.0 = SelectionIcon::Unselected.to_string();
+        // Remove the selected icon from the previous option (if one exists)
+        if let Some(previous_list_item_id) = list_items.get(dropdown_container.selected) {
+            let previous_list_item_children = previous_list_item_query
+                .get(*previous_list_item_id)
+                .unwrap();
+            let previous_list_item_icon_id = previous_list_item_children[1];
+            let mut previous_list_item_icon = list_item_icon_query
+                .get_mut(previous_list_item_icon_id)
+                .unwrap();
+            previous_list_item_icon.0 = SelectionIcon::Unselected.to_string();
+        }
         // Change the selected option in the container
         dropdown_container.selected = list_item.0;
         // Add the selected icon to the newly selected option
