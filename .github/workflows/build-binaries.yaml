@@ -54,7 +54,7 @@ jobs:
 
       - name: Upload binaries to artifacts
         if: ${{ github.event_name == 'release' }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           path: ${{ env.package_name }}.zip
           name: wasm
@@ -138,7 +138,7 @@ jobs:
 
       - name: Upload binaries to artifacts
         if: ${{ github.event_name == 'release' }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           path: ${{ env.package_name }}.zip
           name: linux
@@ -190,7 +190,7 @@ jobs:
 
       - name: Upload binaries to artifacts
         if: ${{ github.event_name == 'release' }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           path: ${{ env.package_name }}.zip
           name: windows
@@ -326,7 +326,7 @@ jobs:
 
       - name: Upload binaries to artifacts
         if: ${{ github.event_name == 'release' }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           path: ${{ env.package_name }}-macOS-${{ matrix.platform.dmg_name }}.dmg
           name: macOS-${{ matrix.platform.dmg_name }}
