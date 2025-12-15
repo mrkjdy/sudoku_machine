@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.3.1](https://github.com/mrkjdy/sudoku_machine/compare/v0.3.0...v0.3.1) - 2025-12-15
+
+### Other
+
+- *(deps)* bump actions/upload-artifact from 5 to 6 ([#117](https://github.com/mrkjdy/sudoku_machine/pull/117))
+- *(deps)* bump actions/download-artifact from 6 to 7 ([#118](https://github.com/mrkjdy/sudoku_machine/pull/118))
+- *(deps)* bump wasm-bindgen-futures from 0.4.55 to 0.4.56 ([#116](https://github.com/mrkjdy/sudoku_machine/pull/116))
+- *(deps)* bump actions/checkout from 5 to 6 ([#115](https://github.com/mrkjdy/sudoku_machine/pull/115))
+- document run commands and wasm-bindgen stuff ([#113](https://github.com/mrkjdy/sudoku_machine/pull/113))
+- disable non-classic modes for now ([#110](https://github.com/mrkjdy/sudoku_machine/pull/110))
+- *(deps)* bump wasm-bindgen-futures from 0.4.54 to 0.4.55 ([#107](https://github.com/mrkjdy/sudoku_machine/pull/107))
+- optimize caching ([#109](https://github.com/mrkjdy/sudoku_machine/pull/109))
+- *(deps)* bump indoc from 2.0.6 to 2.0.7 ([#103](https://github.com/mrkjdy/sudoku_machine/pull/103))
+- switch x86 macos runner to macos-15-intel ([#108](https://github.com/mrkjdy/sudoku_machine/pull/108))
+- *(deps)* bump actions/upload-artifact from 4 to 5 ([#106](https://github.com/mrkjdy/sudoku_machine/pull/106))
+- *(deps)* bump actions/download-artifact from 5 to 6 ([#105](https://github.com/mrkjdy/sudoku_machine/pull/105))
+- *(deps)* bump getrandom from 0.3.3 to 0.3.4 ([#101](https://github.com/mrkjdy/sudoku_machine/pull/101))
+- *(deps)* bump num_enum from 0.7.4 to 0.7.5 ([#102](https://github.com/mrkjdy/sudoku_machine/pull/102))
+
 ## [0.3.0](https://github.com/mrkjdy/sudoku_machine/compare/v0.2.0...v0.3.0) - 2025-09-29
 
 ### Added
