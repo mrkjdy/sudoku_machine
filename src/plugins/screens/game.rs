@@ -71,6 +71,27 @@ struct GameTimer {
     last_displayed_seconds: u64,
 }
 
+type SeedButtonInteractionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (&'static Interaction, &'static Children),
+    (Changed<Interaction>, With<SeedButton>),
+>;
+
+type PuzzleCellHighlightQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static PuzzleCellPosition,
+        &'static mut BackgroundColor,
+        Option<&'static mut PuzzleCellNeighborHighlight>,
+        Option<&'static PuzzleCellKind>,
+        &'static Interaction,
+    ),
+    With<PuzzleCell>,
+>;
+
 const COPY_ICON: &str = "❐";
 const CHECK_ICON: &str = "✔";
 
@@ -370,7 +391,7 @@ fn game_header_layout_system(
         [nav_entity, timer_entity, title_entity]
     };
 
-    let current_children: &[Entity] = &header_children;
+    let current_children: &[Entity] = header_children;
     let needs_reorder = if current_children.len() != desired_children.len() {
         true
     } else {
@@ -409,10 +430,7 @@ fn game_timer_system(
 }
 
 fn seed_button_interaction_system(
-    mut interaction_query: Query<
-        (&Interaction, &Children),
-        (Changed<Interaction>, With<SeedButton>),
-    >,
+    mut interaction_query: SeedButtonInteractionQuery,
     mut icon_query: Query<(Entity, &mut Text), With<SeedCopyIcon>>,
     mut clipboard: ResMut<ClipboardResource>,
     puzzle_settings: Res<PuzzleSettings>,
@@ -477,17 +495,7 @@ fn classic_puzzle_neighbor_highlight_system(
     focused_entity: Res<FocusedEntity>,
     mut commands: Commands,
     position_query: Query<&PuzzleCellPosition, With<PuzzleCell>>,
-    mut cell_query: Query<
-        (
-            Entity,
-            &PuzzleCellPosition,
-            &mut BackgroundColor,
-            Option<&mut PuzzleCellNeighborHighlight>,
-            Option<&PuzzleCellKind>,
-            &Interaction,
-        ),
-        With<PuzzleCell>,
-    >,
+    mut cell_query: PuzzleCellHighlightQuery,
 ) {
     let Some(current) = focused_entity.current else {
         for (entity, _, mut background, highlight, kind, _) in &mut cell_query {

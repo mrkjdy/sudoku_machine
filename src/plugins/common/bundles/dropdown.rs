@@ -106,6 +106,13 @@ struct DropdownButtonBundleOptions {
     button_text_node: Node,
 }
 
+type DropdownButtonInteractionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (&'static Interaction, &'static ChildOf),
+    (Changed<Interaction>, With<DropdownButton>),
+>;
+
 fn dropdown_button_bundle(options: DropdownButtonBundleOptions) -> impl Bundle {
     let DropdownButtonBundleOptions {
         text,
@@ -309,7 +316,7 @@ fn dropdown_button_icon_system(
 }
 
 fn dropdown_list_visibility_system(
-    button_query: Query<(&Interaction, &ChildOf), (Changed<Interaction>, With<DropdownButton>)>,
+    button_query: DropdownButtonInteractionQuery,
     container_query: Query<&Children, With<DropdownContainer>>,
     mut list_query: Query<&mut Visibility, With<DropdownList>>,
     changed_containers: Query<Entity, (With<DropdownContainer>, Changed<DropdownContainer>)>,
