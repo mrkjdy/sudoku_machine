@@ -94,7 +94,7 @@ jobs:
         with:
           path: wasm-artifact
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   build-linux:
     name: Build Linux
