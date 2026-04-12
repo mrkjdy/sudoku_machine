@@ -21,13 +21,15 @@ use crate::{
             },
         },
         despawn_component,
-        nav::{EscapeNavState, NavState},
+        nav::{EscapeNavState, NavButton, NavState},
         puzzles::classic::{classic_puzzle_bundle, ClassicGridState},
     },
     puzzles::{
-        classic::grid::{ClassicGrid, NUM_COLS, NUM_ROWS},
-        classic::puzzle::ClassicPuzzle,
-        PuzzleType,
+        classic::{
+            grid::{ClassicGrid, NUM_COLS, NUM_ROWS},
+            puzzle::ClassicPuzzle,
+        },
+        PuzzleMeta, PuzzleType,
     },
 };
 
@@ -51,6 +53,18 @@ struct SeedCopyIcon;
 #[derive(Component)]
 struct SeedCopyFeedbackTimer(Timer);
 
+#[derive(Component)]
+struct NavButtonGameLayout;
+
+#[derive(Component)]
+struct GameHeader;
+
+#[derive(Component)]
+struct GameTitleSeedGroup;
+
+#[derive(Component)]
+struct GameTimerContainer;
+
 #[derive(Resource, Default)]
 struct GameTimer {
     elapsed: Duration,
@@ -67,6 +81,7 @@ pub fn game_plugin(app: &mut App) {
         .add_systems(
             OnExit(ScreenState::Game),
             (
+                restore_nav_button_layout,
                 despawn_component::<GameContainer>,
                 clear_classic_grid_state,
                 clear_game_timer,
@@ -86,6 +101,7 @@ pub fn game_plugin(app: &mut App) {
                 classic_puzzle_neighbor_highlight_system
                     .run_if(in_state(ScreenState::Game))
                     .run_if(resource_exists::<ClassicGridState>),
+                game_header_layout_system.run_if(in_state(ScreenState::Game)),
                 game_timer_system
                     .run_if(in_state(ScreenState::Game))
                     .run_if(resource_exists::<GameTimer>),
@@ -101,10 +117,28 @@ fn game_setup(
     mut nav_state: ResMut<NextState<NavState>>,
     mut commands: Commands,
     puzzle_settings: Res<PuzzleSettings>,
+    mut nav_button_query: Query<(Entity, &mut Node), With<NavButton>>,
 ) {
     nav_state.set(NavState::Pause);
 
     commands.insert_resource(GameTimer::default());
+
+    let nav_button_entity = nav_button_query
+        .single_mut()
+        .map(|mut nav| {
+            nav.1.position_type = PositionType::Relative;
+            nav.1.left = Val::Auto;
+            nav.1.top = Val::Auto;
+            nav.1.width = Val::Px(80.0);
+            nav.1.height = Val::Px(60.0);
+            nav.1.justify_content = JustifyContent::Center;
+            nav.1.align_items = AlignItems::Center;
+            nav.1.flex_shrink = 0.0;
+            nav.1.margin = UiRect::all(Val::Px(0.0));
+            commands.entity(nav.0).insert(NavButtonGameLayout);
+            nav.0
+        })
+        .ok();
 
     let classic_grid = match puzzle_settings.puzzle_type {
         PuzzleType::Classic => {
@@ -121,32 +155,67 @@ fn game_setup(
         _ => None,
     };
 
-    let mut container_entity = commands.spawn((
-        GameContainer,
-        Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            flex_direction: FlexDirection::Column,
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::FlexStart,
-            padding: UiRect::axes(Val::Px(24.0), Val::Px(100.0)),
-            ..default()
-        },
-    ));
+    let container_entity = commands
+        .spawn((
+            GameContainer,
+            Node {
+                width: Val::Percent(96.0),
+                height: Val::Percent(100.0),
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::FlexStart,
+                padding: UiRect::vertical(Val::Px(24.0)),
+                row_gap: Val::Px(24.0),
+                ..default()
+            },
+        ))
+        .id();
 
-    container_entity.with_children(|parent| {
-        if let Some(grid) = classic_grid {
-            parent
-                .spawn(Node {
-                    width: Val::Percent(100.0),
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::FlexStart,
-                    row_gap: Val::Px(20.0),
-                    ..default()
-                })
-                .with_children(|section_parent| {
-                    section_parent.spawn((
+    let header_entity = commands
+        .spawn((
+            GameHeader,
+            Node {
+                width: Val::Percent(100.0),
+                flex_direction: FlexDirection::Row,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::SpaceBetween,
+                flex_wrap: FlexWrap::Wrap,
+                row_gap: Val::Px(12.0),
+                column_gap: Val::Px(16.0),
+                ..default()
+            },
+            ChildOf(container_entity),
+        ))
+        .id();
+
+    if let Some(nav_button_entity) = nav_button_entity {
+        commands
+            .entity(nav_button_entity)
+            .insert(ChildOf(header_entity));
+    }
+
+    commands.entity(header_entity).with_children(|header| {
+        if classic_grid.is_some() {
+            header
+                .spawn((
+                    GameTitleSeedGroup,
+                    Node {
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::Center,
+                        row_gap: Val::Px(8.0),
+                        margin: UiRect::horizontal(Val::Auto),
+                        ..default()
+                    },
+                ))
+                .with_children(|info| {
+                    info.spawn((
+                        Text::new(ClassicPuzzle::title()),
+                        TextFont::from_font_size(30.0),
+                        ThemedFontWeight::Bold,
+                        ThemedTextColor,
+                        TextLayout::new_with_justify(JustifyText::Center),
+                    ));
+                    info.spawn((
                         SeedButton,
                         Button,
                         ThemedBackgroundColor,
@@ -180,33 +249,18 @@ fn game_setup(
                             )
                         ],
                     ));
-
-                    section_parent
-                        .spawn((
-                            GamePuzzlePanel,
-                            Node {
-                                width: Val::Percent(100.0),
-                                flex_direction: FlexDirection::Column,
-                                align_items: AlignItems::Center,
-                                justify_content: JustifyContent::Center,
-                                ..default()
-                            },
-                        ))
-                        .with_children(|puzzle_parent| {
-                            puzzle_parent.spawn(classic_puzzle_bundle(grid));
-                        });
                 });
         }
-        parent.spawn((
+
+        header.spawn((
+            GameTimerContainer,
             Node {
-                position_type: PositionType::Absolute,
-                top: Val::Px(20.0),
-                right: Val::Px(20.0),
                 flex_direction: FlexDirection::Column,
                 align_items: AlignItems::FlexEnd,
                 justify_content: JustifyContent::Center,
                 padding: UiRect::all(Val::Px(12.0)),
                 row_gap: Val::Px(4.0),
+                flex_shrink: 0.0,
                 ..default()
             },
             ThemedBackgroundColor,
@@ -223,6 +277,28 @@ fn game_setup(
             )],
         ));
     });
+
+    if let Some(grid) = classic_grid {
+        let puzzle_panel = commands
+            .spawn((
+                GamePuzzlePanel,
+                Node {
+                    width: Val::Percent(100.0),
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
+                ChildOf(container_entity),
+            ))
+            .id();
+
+        commands
+            .entity(puzzle_panel)
+            .with_children(|puzzle_parent| {
+                puzzle_parent.spawn(classic_puzzle_bundle(grid));
+            });
+    }
 }
 
 fn clear_classic_grid_state(mut commands: Commands) {
@@ -234,16 +310,93 @@ fn clear_game_timer(mut commands: Commands) {
     commands.remove_resource::<GameTimer>();
 }
 
+fn restore_nav_button_layout(
+    mut commands: Commands,
+    mut nav_query: Query<(Entity, &mut Node), With<NavButtonGameLayout>>,
+) {
+    if let Ok((entity, mut node)) = nav_query.single_mut() {
+        node.position_type = PositionType::Absolute;
+        node.left = Val::Px(20.0);
+        node.top = Val::Px(20.0);
+        node.width = Val::Px(80.0);
+        node.height = Val::Px(60.0);
+        node.justify_content = JustifyContent::FlexStart;
+        node.align_items = AlignItems::FlexStart;
+        node.flex_shrink = 1.0;
+        node.margin = UiRect::all(Val::Px(0.0));
+        commands.entity(entity).remove::<ChildOf>();
+        commands.entity(entity).remove::<NavButtonGameLayout>();
+    }
+}
+
+fn game_header_layout_system(
+    mut commands: Commands,
+    header_query: Query<(Entity, &ComputedNode, &Children), With<GameHeader>>,
+    nav_query: Query<(Entity, &ComputedNode), With<NavButtonGameLayout>>,
+    title_query: Query<(Entity, &ComputedNode), With<GameTitleSeedGroup>>,
+    timer_query: Query<(Entity, &ComputedNode), With<GameTimerContainer>>,
+) {
+    let Ok((header_entity, header_node, header_children)) = header_query.single() else {
+        return;
+    };
+    let Ok((nav_entity, nav_node)) = nav_query.single() else {
+        return;
+    };
+    let Ok((title_entity, title_node)) = title_query.single() else {
+        return;
+    };
+    let Ok((timer_entity, timer_node)) = timer_query.single() else {
+        return;
+    };
+
+    let available_width = header_node.size().x;
+    if available_width <= 0.0 {
+        return;
+    }
+
+    let nav_width = nav_node.size().x;
+    let title_width = title_node.size().x;
+    let timer_width = timer_node.size().x;
+    if nav_width <= 0.0 || title_width <= 0.0 || timer_width <= 0.0 {
+        return;
+    }
+
+    const HEADER_COLUMN_GAP: f32 = 16.0;
+    let total_required = nav_width + title_width + timer_width + (2.0 * HEADER_COLUMN_GAP);
+
+    let desired_children: [Entity; 3] = if total_required <= available_width {
+        [nav_entity, title_entity, timer_entity]
+    } else {
+        [nav_entity, timer_entity, title_entity]
+    };
+
+    let current_children: &[Entity] = &header_children;
+    let needs_reorder = if current_children.len() != desired_children.len() {
+        true
+    } else {
+        current_children
+            .iter()
+            .zip(desired_children.iter())
+            .any(|(current, desired)| current != desired)
+    };
+
+    if needs_reorder {
+        commands
+            .entity(header_entity)
+            .replace_children(&desired_children);
+    }
+}
+
 fn game_timer_system(
     time: Res<Time>,
     mut game_timer: ResMut<GameTimer>,
     mut timer_text_query: Query<&mut Text, With<GameTimerText>>,
 ) {
-    let Some(mut timer_text) = timer_text_query.iter_mut().next() else {
-        return;
-    };
+    let mut timer_text = timer_text_query
+        .single_mut()
+        .expect("exactly one GameTimerText should exist");
 
-    game_timer.elapsed += Duration::from_secs_f32(time.delta_secs());
+    game_timer.elapsed += time.delta();
     let total_seconds = game_timer.elapsed.as_secs();
     if total_seconds == game_timer.last_displayed_seconds {
         return;

@@ -56,7 +56,7 @@ impl From<NavState> for String {
     ThemedBorderRect,
     Visibility
 )]
-struct NavButton;
+pub struct NavButton;
 
 #[derive(Component)]
 #[require(Text, ThemedFontWeight::Regular, ThemedTextColor)]

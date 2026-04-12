@@ -130,7 +130,7 @@ fn row_bundle(options: RowBundleOptions) -> impl Bundle {
 
 #[must_use]
 pub fn classic_puzzle_bundle(grid: ClassicGrid) -> impl Bundle {
-    let font_size = 40.0;
+    let font_size = 36.0;
 
     let row_bundles = grid.0.into_iter().enumerate().map(move |(row, row_cells)| {
         row_bundle(RowBundleOptions {

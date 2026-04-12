@@ -33,7 +33,7 @@ pub struct ClassicPuzzle {
 
 impl PuzzleMeta for ClassicPuzzle {
     fn title() -> &'static str {
-        "Classic Sudoku"
+        "Classic"
     }
 
     fn description() -> &'static str {

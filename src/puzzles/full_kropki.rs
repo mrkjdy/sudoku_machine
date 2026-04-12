@@ -7,7 +7,7 @@ pub struct FullKropkiPuzzle {}
 
 impl PuzzleMeta for FullKropkiPuzzle {
     fn title() -> &'static str {
-        "Full Kropki Sudoku"
+        "Full Kropki"
     }
 
     fn description() -> &'static str {

@@ -7,7 +7,7 @@ pub struct KnightPuzzle {}
 
 impl PuzzleMeta for KnightPuzzle {
     fn title() -> &'static str {
-        "Knight Sudoku"
+        "Knight"
     }
 
     fn description() -> &'static str {
