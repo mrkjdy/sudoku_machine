@@ -98,7 +98,7 @@ jobs:
           cargo bench --quiet | tee -a bench.md
           echo '```' >> bench.md
       - name: Comment on PR
-        uses: mshick/add-pr-comment@v2
+        uses: mshick/add-pr-comment@v3
         with:
           message-id: benchmark-results
           message-path: bench.md
