@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use strum::IntoEnumIterator;
 
 use crate::{
-    despawn_component,
     plugins::{
         common::{
             bundles::{
@@ -19,25 +18,25 @@ use crate::{
                 text::{ThemedFontWeight, ThemedTextColor},
             },
         },
-        game::PuzzleType,
+        despawn_component,
         nav::NavState,
     },
+    puzzles::PuzzleType,
     utility::seed::SeedRng,
-    AppState, PuzzleSettings,
 };
 
-use super::{MenuState, PIXELS_PER_CH};
+use super::{PuzzleSettings, ScreenState, PIXELS_PER_CH};
 
 pub fn new_puzzle_menu_plugin(app: &mut App) {
-    app.add_systems(OnEnter(MenuState::NewPuzzle), new_puzzle_menu_setup)
+    app.add_systems(OnEnter(ScreenState::NewPuzzle), new_puzzle_menu_setup)
         .add_systems(
-            OnExit(MenuState::NewPuzzle),
+            OnExit(ScreenState::NewPuzzle),
             despawn_component::<NewMenuContainer>,
         )
         .add_plugins((dropdown::dropdown_plugin, text_input_plugin))
         .add_systems(
             Update,
-            (description_system, start_button_system).run_if(in_state(MenuState::NewPuzzle)),
+            (description_system, start_button_system).run_if(in_state(ScreenState::NewPuzzle)),
         );
 }
 
@@ -105,7 +104,7 @@ fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut command
         PuzzleTypeDropdown,
         dropdown_bundle(DropdownBundleOptions {
             selected: initial_selected_type as usize,
-            options: PuzzleType::iter().map(|o| o.to_string()).collect(),
+            options: PuzzleType::iter().map(|pt| pt.title().into()).collect(),
             text_font: TextFont::from_font_size(body_font_size),
             container_node: Node {
                 width,
@@ -206,7 +205,8 @@ fn description_system(
         let mut description_text = description_text_query.single_mut().unwrap();
         description_text.0 = PuzzleType::try_from(dropdown.selected)
             .unwrap()
-            .description();
+            .description()
+            .into();
     }
 }
 
@@ -216,8 +216,7 @@ fn start_button_system(
     seed_container_query: Query<(&Children, &TextInputContainer), With<SeedTextInput>>,
     seed_text_query: Query<&Text>,
     mut puzzle_settings: ResMut<PuzzleSettings>,
-    mut next_menu_state: ResMut<NextState<MenuState>>,
-    mut next_app_state: ResMut<NextState<AppState>>,
+    mut next_screen_state: ResMut<NextState<ScreenState>>,
 ) {
     for _ in interaction_query
         .iter()
@@ -237,7 +236,6 @@ fn start_button_system(
             seed_text.0.clone()
         };
         // Change states
-        next_menu_state.set(MenuState::Disabled);
-        next_app_state.set(AppState::Game);
+        next_screen_state.set(ScreenState::Game);
     }
 }

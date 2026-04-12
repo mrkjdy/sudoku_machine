@@ -14,7 +14,7 @@ pub mod node;
 pub mod text;
 
 #[derive(Resource, Clone)]
-struct Theme {
+pub struct Theme {
     clear_color: Color,
     text_font_regular: Handle<Font>,
     text_font_bold: Handle<Font>,
@@ -26,6 +26,7 @@ struct Theme {
     button_normal_background: BackgroundColor, // (not hovered or pressed)
     button_hovered_background: BackgroundColor,
     button_pressed_background: BackgroundColor,
+    puzzle_given_background: BackgroundColor,
 }
 
 impl Theme {
@@ -46,6 +47,7 @@ impl Theme {
             button_normal_background: BackgroundColor(Color::srgb_u8(21, 26, 35)), // #151A23
             button_hovered_background: BackgroundColor(Color::srgb(0.25, 0.25, 0.25)),
             button_pressed_background: BackgroundColor(Color::srgb(0.35, 0.35, 0.85)),
+            puzzle_given_background: BackgroundColor(Color::srgb_u8(31, 39, 52)), // #1F2734
         }
     }
 
@@ -66,7 +68,16 @@ impl Theme {
             button_normal_background: BackgroundColor(Color::srgb(1.0, 1.0, 1.0)),
             button_hovered_background: BackgroundColor(Color::srgb(0.75, 0.75, 0.75)),
             button_pressed_background: BackgroundColor(Color::srgb(0.35, 0.35, 0.85)),
+            puzzle_given_background: BackgroundColor(Color::srgb(0.95, 0.96, 0.99)),
         }
+    }
+
+    pub fn puzzle_given_background_color(&self) -> Color {
+        self.puzzle_given_background.0
+    }
+
+    pub fn button_normal_background_color(&self) -> Color {
+        self.button_normal_background.0
     }
 }
 

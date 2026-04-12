@@ -4756,6 +4756,7 @@ dependencies = [
  "rand_seeder",
  "strum 0.27.2",
  "strum_macros 0.27.2",
+ "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
 ]
