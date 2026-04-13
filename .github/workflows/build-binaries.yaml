@@ -90,7 +90,7 @@ jobs:
         with:
           name: wasm
       - run: unzip ${{ env.package_name }}.zip -d wasm-artifact
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: wasm-artifact
       - id: deployment
