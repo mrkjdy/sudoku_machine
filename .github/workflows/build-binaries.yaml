@@ -15,8 +15,6 @@ jobs:
   build-wasm:
     name: Build Wasm
     runs-on: ubuntu-latest
-    env:
-      CARGO_TARGET_DIR: target/wasm32-unknown-unknown
     steps:
       - uses: actions/checkout@v5
       - name: Install Rust toolchain
@@ -99,8 +97,6 @@ jobs:
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
-    env:
-      CARGO_TARGET_DIR: target/x86_64-unknown-linux-gnu
     steps:
       - uses: actions/checkout@v5
       - name: Install Rust toolchain
@@ -157,8 +153,6 @@ jobs:
   build-windows:
     name: Build Windows
     runs-on: windows-latest
-    env:
-      CARGO_TARGET_DIR: target/x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v5
       - name: Install Rust toolchain
@@ -220,8 +214,6 @@ jobs:
             target: x86_64-apple-darwin
             runner: macos-15-intel
     runs-on: ${{ matrix.platform.runner }}
-    env:
-      CARGO_TARGET_DIR: target/${{ matrix.platform.target }}
     steps:
       - uses: actions/checkout@v5
       - name: Install Rust toolchain
@@ -273,6 +265,8 @@ jobs:
           cp -r assets "${{ env.app_name }}.app/Contents/MacOS/"
 
           # Create Info.plist
+          PACKAGE_VERSION="$(cargo metadata --no-deps --format-version 1 |
+            jq -er --arg name "$package_name" '.packages[] | select(.name == $name) | .version')"
           MIN_SYSTEM_VERSION_PRINTOUT="$(rustc --print=deployment-target --target ${{ matrix.platform.target }})"
           MIN_SYSTEM_VERSION="$(echo $MIN_SYSTEM_VERSION_PRINTOUT | cut -d'=' -f2)"
           cat > "${{ env.app_name }}.app/Contents/Info.plist" <<- EOF
@@ -297,9 +291,9 @@ jobs:
               <key>CFBundlePackageType</key>
               <string>APPL</string>
               <key>CFBundleShortVersionString</key>
-              <string>${{ env.ref_name }}</string>
+              <string>$PACKAGE_VERSION</string>
               <key>CFBundleVersion</key>
-              <string>${{ env.ref_name }}</string>
+              <string>$PACKAGE_VERSION</string>
               <key>LSMinimumSystemVersion</key>
               <string>$MIN_SYSTEM_VERSION</string>
           </dict>
