@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -63,43 +67,5 @@ jobs:
         with:
           profile: minimal
           components: rustfmt
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ runner.os }}-ci
-          cache-on-failure: true
       - name: Run cargo fmt
         run: cargo fmt --all --check
-
-  bench:
-    name: Bench
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    timeout-minutes: 30
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v7
-      - name: Install Rust toolchain
-        uses: ./.github/actions/install-rust-toolchain
-        with:
-          profile: minimal
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ runner.os }}-ci
-          cache-on-failure: true
-      - name: Install Dependencies
-        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
-      - name: Compile
-        run: cargo bench --no-run
-      - name: Run bench
-        run: |
-          echo "## 🏎️ Bench Results" > bench.md
-          echo '```' >> bench.md
-          cargo bench --quiet | tee -a bench.md
-          echo '```' >> bench.md
-      - name: Comment on PR
-        uses: mshick/add-pr-comment@v3
-        with:
-          message-id: benchmark-results
-          message-path: bench.md
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
