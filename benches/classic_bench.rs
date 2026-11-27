@@ -4,7 +4,8 @@ use divan::{bench, Bencher};
 use rand::Rng;
 use rand::RngCore;
 use rand_seeder::{SipHasher, SipRng};
-use sudoku_machine::{puzzles::classic::ClassicPuzzle, utility::seed::SeedRng};
+use sudoku_machine::puzzles::classic::puzzle::ClassicPuzzle;
+use sudoku_machine::utility::seed::SeedRng;
 
 fn main() {
     divan::main();
@@ -44,7 +45,7 @@ fn create_random_my_rng() -> MyRng {
 
 fn create_random_puzzle(rng: &mut MyRng) -> ClassicPuzzle {
     let seed = rng.gen_seed();
-    ClassicPuzzle::from_seed(seed)
+    ClassicPuzzle::from_seed(&seed)
 }
 
 #[bench(min_time = Duration::from_secs(10))]
@@ -210,6 +211,6 @@ fn from_seed_recursive(bencher: Bencher) {
             seed
         })
         .bench_values(|seed| {
-            let _ = ClassicPuzzle::from_seed(seed);
+            let _ = ClassicPuzzle::from_seed(&seed);
         });
 }

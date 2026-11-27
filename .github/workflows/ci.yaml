@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Install Rust toolchain
         uses: ./.github/actions/install-rust-toolchain
         with:
@@ -36,7 +36,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Install Rust toolchain
         uses: ./.github/actions/install-rust-toolchain
         with:
@@ -57,7 +57,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Install Rust toolchain
         uses: ./.github/actions/install-rust-toolchain
         with:
@@ -78,7 +78,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Install Rust toolchain
         uses: ./.github/actions/install-rust-toolchain
         with:
@@ -98,7 +98,7 @@ jobs:
           cargo bench --quiet | tee -a bench.md
           echo '```' >> bench.md
       - name: Comment on PR
-        uses: mshick/add-pr-comment@v2
+        uses: mshick/add-pr-comment@v3
         with:
           message-id: benchmark-results
           message-path: bench.md
