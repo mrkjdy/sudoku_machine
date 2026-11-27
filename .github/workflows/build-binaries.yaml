@@ -33,11 +33,11 @@ env:
   app_name: Sudoku Machine
   package_name: sudoku_machine
   macos_signing_identity: mrkjdy-sudoku_machine
-  package_build: ${{
-    inputs.release_tag != '' ||
-    (github.event_name == 'pull_request' &&
-    github.event.pull_request.head.repo.full_name == github.repository &&
-    startsWith(github.head_ref, 'release-plz-')) }}
+  build_profile: >-
+    ${{ (inputs.release_tag != '' ||
+        (github.event_name == 'pull_request' &&
+         github.event.pull_request.head.repo.full_name == github.repository &&
+         startsWith(github.head_ref, 'release-plz-'))) && 'release' || 'ci' }}
 
 jobs:
   build-wasm:
@@ -54,14 +54,14 @@ jobs:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ runner.os }}-wasm32-unknown-unknown
+          shared-key: ${{ runner.os }}-wasm32-unknown-unknown${{ env.build_profile == 'ci' && '-ci' || '' }}
           cache-on-failure: true
       - name: Build
         run: |
-          cargo build --locked --release --target wasm32-unknown-unknown --features bevy/webgpu
+          cargo build --locked --profile ${{ env.build_profile }} --target wasm32-unknown-unknown --features bevy/webgpu
 
       - name: Install matching wasm-bindgen CLI
-        if: env.package_build == 'true'
+        if: env.build_profile == 'release'
         run: |
           version="$(python3 - <<'PY'
           import tomllib
@@ -77,7 +77,7 @@ jobs:
           cargo install --locked --version "$version" wasm-bindgen-cli
 
       - name: Prepare package
-        if: env.package_build == 'true'
+        if: env.build_profile == 'release'
         run: |
           wasm-bindgen \
             --out-name ${{ env.package_name }} \
@@ -87,13 +87,13 @@ jobs:
           cp -r assets wasm/
 
       - name: Package as a zip
-        if: env.package_build == 'true'
+        if: env.build_profile == 'release'
         working-directory: ./wasm
         run: |
           zip --recurse-paths ../${{ env.package_name }}.zip .
 
       - name: Upload binaries to artifacts
-        if: env.package_build == 'true'
+        if: env.build_profile == 'release'
         uses: actions/upload-artifact@v7
         with:
           path: ${{ env.package_name }}.zip
@@ -116,7 +116,7 @@ jobs:
           targets: x86_64-unknown-linux-gnu
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ runner.os }}-x86_64-unknown-linux-gnu
+          shared-key: ${{ runner.os }}-x86_64-unknown-linux-gnu${{ env.build_profile == 'ci' && '-ci' || '' }}
           cache-on-failure: true
       - name: install dependencies
         run: |
@@ -127,23 +127,23 @@ jobs:
 
       - name: Build
         run: |
-          cargo build --locked --release --target x86_64-unknown-linux-gnu
+          cargo build --locked --profile ${{ env.build_profile }} --target x86_64-unknown-linux-gnu
 
       - name: Prepare package
-        if: env.package_build == 'true'
+        if: env.build_profile == 'release'
         run: |
           mkdir linux
           cp target/x86_64-unknown-linux-gnu/release/${{ env.package_name }} linux/
           cp -r assets linux/
 
       - name: Package as a zip
-        if: env.package_build == 'true'
+        if: env.build_profile == 'release'
         working-directory: ./linux
         run: |
           zip --recurse-paths ../${{ env.package_name }}.zip .
 
       - name: Upload binaries to artifacts
-        if: env.package_build == 'true'
+        if: env.build_profile == 'release'
         uses: actions/upload-artifact@v7
         with:
           path: ${{ env.package_name }}.zip
@@ -166,27 +166,27 @@ jobs:
           targets: x86_64-pc-windows-msvc
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ runner.os }}-x86_64-pc-windows-msvc
+          shared-key: ${{ runner.os }}-x86_64-pc-windows-msvc${{ env.build_profile == 'ci' && '-ci' || '' }}
           cache-on-failure: true
 
       - name: Build
         run: |
-          cargo build --locked --release --target x86_64-pc-windows-msvc
+          cargo build --locked --profile ${{ env.build_profile }} --target x86_64-pc-windows-msvc
 
       - name: Prepare package
-        if: env.package_build == 'true'
+        if: env.build_profile == 'release'
         run: |
           mkdir windows
           cp target/x86_64-pc-windows-msvc/release/${{ env.package_name }}.exe windows/
           cp -r assets windows/
 
       - name: Package as a zip
-        if: env.package_build == 'true'
+        if: env.build_profile == 'release'
         run: |
           Compress-Archive -Path windows/* -DestinationPath ${{ env.package_name }}.zip
 
       - name: Upload binaries to artifacts
-        if: env.package_build == 'true'
+        if: env.build_profile == 'release'
         uses: actions/upload-artifact@v7
         with:
           path: ${{ env.package_name }}.zip
@@ -220,12 +220,12 @@ jobs:
           targets: ${{ matrix.platform.target }}
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ runner.os }}-${{ matrix.platform.target }}
+          shared-key: ${{ runner.os }}-${{ matrix.platform.target }}${{ env.build_profile == 'ci' && '-ci' || '' }}
           cache-on-failure: true
 
       - name: Build
         run: |
-          cargo build --locked --release --target ${{ matrix.platform.target }}
+          cargo build --locked --profile ${{ env.build_profile }} --target ${{ matrix.platform.target }}
 
       # From https://docs.github.com/en/actions/use-cases-and-examples/deploying/installing-an-apple-certificate-on-macos-runners-for-xcode-development#add-a-step-to-your-workflow
       - name: Install macOS Code Signing certificate
@@ -253,7 +253,7 @@ jobs:
           security list-keychain -d user -s "$KEYCHAIN_PATH"
 
       - name: Prepare Package
-        if: env.package_build == 'true'
+        if: env.build_profile == 'release'
         run: |
           # Create .app
           mkdir -p "${{ env.app_name }}.app/Contents/MacOS"
@@ -304,7 +304,7 @@ jobs:
         run: codesign --force --deep --sign "$macos_signing_identity" "$app_name.app"
 
       - name: Create DMG
-        if: env.package_build == 'true'
+        if: env.build_profile == 'release'
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
@@ -328,7 +328,7 @@ jobs:
             dmg-content
 
       - name: Upload binaries to artifacts
-        if: env.package_build == 'true'
+        if: env.build_profile == 'release'
         uses: actions/upload-artifact@v7
         with:
           path: ${{ env.package_name }}-macOS-${{ matrix.platform.dmg_name }}.dmg
