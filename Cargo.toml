@@ -52,6 +52,12 @@ codegen-units = 1
 # Slows compile times, marginal improvements.
 lto = "thin"
 
+# Link binaries in pull request checks with less optimization work.
+[profile.ci]
+inherits = "release"
+codegen-units = 16
+lto = "off"
+
 # Optimize for size in the wasm-release profile to reduce load times and bandwidth usage on web.
 [profile.wasm-release]
 # Default to release profile values.
