@@ -3,13 +3,37 @@ name: Build Binaries
 on:
   pull_request:
     branches: [main]
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+    secrets:
+      MACOS_BUILD_CERTIFICATE_BASE64:
+        required: true
+      MACOS_P12_PASSWORD:
+        required: true
+      MACOS_KEYCHAIN_PASSWORD:
+        required: true
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing git tag for the draft release to build and publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 env:
   app_name: Sudoku Machine
   package_name: sudoku_machine
   macos_signing_identity: mrkjdy-sudoku_machine
+  package_build: ${{
+    inputs.release_tag != '' ||
+    (github.event_name == 'pull_request' &&
+    github.event.pull_request.head.repo.full_name == github.repository &&
+    startsWith(github.head_ref, 'release-plz-')) }}
 
 jobs:
   build-wasm:
@@ -17,6 +41,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || '' }}
       - name: Install Rust toolchain
         uses: ./.github/actions/install-rust-toolchain
         with:
@@ -26,16 +52,28 @@ jobs:
         with:
           shared-key: ${{ runner.os }}-wasm32-unknown-unknown
           cache-on-failure: true
-      - name: install wasm-bindgen-cli
-        run: |
-          cargo install --locked wasm-bindgen-cli
-
       - name: Build
         run: |
-          cargo build --release --target wasm32-unknown-unknown --features bevy/webgpu
+          cargo build --locked --release --target wasm32-unknown-unknown --features bevy/webgpu
+
+      - name: Install matching wasm-bindgen CLI
+        if: env.package_build == 'true'
+        run: |
+          version="$(python3 - <<'PY'
+          import tomllib
+
+          with open("Cargo.lock", "rb") as lockfile:
+              packages = tomllib.load(lockfile)["package"]
+          versions = {package["version"] for package in packages if package["name"] == "wasm-bindgen"}
+          if len(versions) != 1:
+              raise SystemExit("Expected exactly one wasm-bindgen version in Cargo.lock")
+          print(versions.pop())
+          PY
+          )"
+          cargo install --locked --version "$version" wasm-bindgen-cli
 
       - name: Prepare package
-        if: ${{ github.event_name == 'release' }}
+        if: env.package_build == 'true'
         run: |
           wasm-bindgen \
             --out-name ${{ env.package_name }} \
@@ -45,60 +83,28 @@ jobs:
           cp -r assets wasm/
 
       - name: Package as a zip
-        if: ${{ github.event_name == 'release' }}
+        if: env.package_build == 'true'
         working-directory: ./wasm
         run: |
           zip --recurse-paths ../${{ env.package_name }}.zip .
 
       - name: Upload binaries to artifacts
-        if: ${{ github.event_name == 'release' }}
+        if: env.package_build == 'true'
         uses: actions/upload-artifact@v7
         with:
           path: ${{ env.package_name }}.zip
           name: wasm
-          retention-days: 1
-
-      - name: Upload binaries to release
-        if: ${{ github.event_name == 'release' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.package_name }}.zip
-          asset_name: ${{ env.package_name }}-wasm-${{ github.ref_name }}.zip
+          if-no-files-found: error
           overwrite: true
-          tag: ${{ github.ref_name }}
-
-  deploy-to-github-pages:
-    name: Deploy to GitHub Pages
-    if: ${{ github.event_name == 'release' }}
-    needs: build-wasm
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/configure-pages@v6
-      - uses: actions/download-artifact@v8
-        id: download-artifact
-        with:
-          name: wasm
-      - run: unzip ${{ env.package_name }}.zip -d wasm-artifact
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: wasm-artifact
-      - id: deployment
-        uses: actions/deploy-pages@v5
+          retention-days: 7
 
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || '' }}
       - name: Install Rust toolchain
         uses: ./.github/actions/install-rust-toolchain
         with:
@@ -117,44 +123,38 @@ jobs:
 
       - name: Build
         run: |
-          cargo build --release --target x86_64-unknown-linux-gnu
+          cargo build --locked --release --target x86_64-unknown-linux-gnu
 
       - name: Prepare package
-        if: ${{ github.event_name == 'release' }}
+        if: env.package_build == 'true'
         run: |
           mkdir linux
           cp target/x86_64-unknown-linux-gnu/release/${{ env.package_name }} linux/
           cp -r assets linux/
 
       - name: Package as a zip
-        if: ${{ github.event_name == 'release' }}
+        if: env.package_build == 'true'
         working-directory: ./linux
         run: |
           zip --recurse-paths ../${{ env.package_name }}.zip .
 
       - name: Upload binaries to artifacts
-        if: ${{ github.event_name == 'release' }}
+        if: env.package_build == 'true'
         uses: actions/upload-artifact@v7
         with:
           path: ${{ env.package_name }}.zip
           name: linux
-          retention-days: 1
-
-      - name: Upload binaries to release
-        if: ${{ github.event_name == 'release' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.package_name }}.zip
-          asset_name: ${{ env.package_name }}-linux-${{ github.ref_name }}.zip
+          if-no-files-found: error
           overwrite: true
-          tag: ${{ github.ref_name }}
+          retention-days: 7
 
   build-windows:
     name: Build Windows
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || '' }}
       - name: Install Rust toolchain
         uses: ./.github/actions/install-rust-toolchain
         with:
@@ -167,38 +167,29 @@ jobs:
 
       - name: Build
         run: |
-          cargo build --release --target x86_64-pc-windows-msvc
+          cargo build --locked --release --target x86_64-pc-windows-msvc
 
       - name: Prepare package
-        if: ${{ github.event_name == 'release' }}
+        if: env.package_build == 'true'
         run: |
           mkdir windows
           cp target/x86_64-pc-windows-msvc/release/${{ env.package_name }}.exe windows/
-          mkdir assets -ea 0
           cp -r assets windows/
 
       - name: Package as a zip
-        if: ${{ github.event_name == 'release' }}
+        if: env.package_build == 'true'
         run: |
           Compress-Archive -Path windows/* -DestinationPath ${{ env.package_name }}.zip
 
       - name: Upload binaries to artifacts
-        if: ${{ github.event_name == 'release' }}
+        if: env.package_build == 'true'
         uses: actions/upload-artifact@v7
         with:
           path: ${{ env.package_name }}.zip
           name: windows
-          retention-days: 1
-
-      - name: Upload binaries to release
-        if: ${{ github.event_name == 'release' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.package_name }}.zip
-          asset_name: ${{ env.package_name }}-windows-${{ github.ref_name }}.zip
+          if-no-files-found: error
           overwrite: true
-          tag: ${{ github.ref_name }}
+          retention-days: 7
 
   build-macos:
     name: Build macOS - ${{ matrix.platform.job_name }}
@@ -216,6 +207,8 @@ jobs:
     runs-on: ${{ matrix.platform.runner }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || '' }}
       - name: Install Rust toolchain
         uses: ./.github/actions/install-rust-toolchain
         with:
@@ -228,35 +221,35 @@ jobs:
 
       - name: Build
         run: |
-          cargo build --release --target ${{ matrix.platform.target }}
+          cargo build --locked --release --target ${{ matrix.platform.target }}
 
       # From https://docs.github.com/en/actions/use-cases-and-examples/deploying/installing-an-apple-certificate-on-macos-runners-for-xcode-development#add-a-step-to-your-workflow
       - name: Install macOS Code Signing certificate
-        if: ${{ github.event_name == 'release' }}
+        if: inputs.release_tag != ''
         env:
           MACOS_BUILD_CERTIFICATE_BASE64: ${{ secrets.MACOS_BUILD_CERTIFICATE_BASE64 }}
           MACOS_P12_PASSWORD: ${{ secrets.MACOS_P12_PASSWORD }}
           MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
         run: |
           # create variables
-          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          CERTIFICATE_PATH="$RUNNER_TEMP/build_certificate.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
 
           # import certificate from secrets
-          echo -n "$MACOS_BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          printf '%s' "$MACOS_BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
 
           # create temporary keychain
-          security create-keychain -p "$MACOS_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$MACOS_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security create-keychain -p "$MACOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$MACOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
           # import certificate to keychain
-          security import $CERTIFICATE_PATH -P "$MACOS_P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -k "$MACOS_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
+          security import "$CERTIFICATE_PATH" -P "$MACOS_P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$MACOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
 
       - name: Prepare Package
-        if: ${{ github.event_name == 'release' }}
+        if: env.package_build == 'true'
         run: |
           # Create .app
           mkdir -p "${{ env.app_name }}.app/Contents/MacOS"
@@ -268,7 +261,7 @@ jobs:
           PACKAGE_VERSION="$(cargo metadata --no-deps --format-version 1 |
             jq -er --arg name "$package_name" '.packages[] | select(.name == $name) | .version')"
           MIN_SYSTEM_VERSION_PRINTOUT="$(rustc --print=deployment-target --target ${{ matrix.platform.target }})"
-          MIN_SYSTEM_VERSION="$(echo $MIN_SYSTEM_VERSION_PRINTOUT | cut -d'=' -f2)"
+          MIN_SYSTEM_VERSION="${MIN_SYSTEM_VERSION_PRINTOUT#*=}"
           cat > "${{ env.app_name }}.app/Contents/Info.plist" <<- EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -300,12 +293,24 @@ jobs:
           </plist>
 
           EOF
+          plutil -lint "${{ env.app_name }}.app/Contents/Info.plist"
 
-          # Sign .app
-          codesign --force --deep --sign ${{ env.macos_signing_identity }} "${{ env.app_name }}.app"
+      - name: Sign macOS app
+        if: inputs.release_tag != ''
+        run: codesign --force --deep --sign "$macos_signing_identity" "$app_name.app"
 
-          # Create a fancy DMG
+      - name: Create DMG
+        if: env.package_build == 'true'
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
           brew install create-dmg
+          mkdir dmg-content
+          mv "$app_name.app" dmg-content/
+          signing_args=()
+          if [[ -n "$RELEASE_TAG" ]]; then
+            signing_args=(--codesign "$macos_signing_identity")
+          fi
           create-dmg \
             --volname "${{ env.package_name }}" \
             --background "assets/images/dmg-background.png" \
@@ -314,24 +319,75 @@ jobs:
             --icon "${{ env.app_name }}.app" 128 64 \
             --hide-extension "${{ env.app_name }}.app" \
             --app-drop-link 384 64 \
-            --codesign ${{ env.macos_signing_identity }} \
+            "${signing_args[@]}" \
             "${{ env.package_name }}-macOS-${{ matrix.platform.dmg_name }}.dmg" \
-            "${{ env.app_name }}.app"
+            dmg-content
 
       - name: Upload binaries to artifacts
-        if: ${{ github.event_name == 'release' }}
+        if: env.package_build == 'true'
         uses: actions/upload-artifact@v7
         with:
           path: ${{ env.package_name }}-macOS-${{ matrix.platform.dmg_name }}.dmg
           name: macOS-${{ matrix.platform.dmg_name }}
-          retention-days: 1
-
-      - name: Upload binaries to release
-        if: ${{ github.event_name == 'release' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.package_name }}-macOS-${{ matrix.platform.dmg_name }}.dmg
-          asset_name: ${{ env.package_name }}-macOS-${{ matrix.platform.dmg_name }}-${{ github.ref_name }}.dmg
+          if-no-files-found: error
           overwrite: true
-          tag: ${{ github.ref_name }}
+          retention-days: 7
+
+  publish-release:
+    name: Publish GitHub Release
+    if: inputs.release_tag != ''
+    needs: [build-wasm, build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-release-${{ inputs.release_tag }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: packages
+      - name: Upload packages and publish draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          if [[ "$(gh release view --json isDraft --jq .isDraft -- "$RELEASE_TAG")" != true ]]; then
+            echo "::error::Expected a draft GitHub Release for $RELEASE_TAG"
+            exit 1
+          fi
+          asset_version="${RELEASE_TAG//\//-}"
+          mkdir release-assets
+          for platform in wasm linux windows; do
+            mv "packages/$platform/$package_name.zip" \
+              "release-assets/$package_name-$platform-$asset_version.zip"
+          done
+          for arch in apple-silicon intel; do
+            mv "packages/macOS-$arch/$package_name-macOS-$arch.dmg" \
+              "release-assets/$package_name-macOS-$arch-$asset_version.dmg"
+          done
+          gh release upload --clobber -- "$RELEASE_TAG" release-assets/*
+          gh release edit --draft=false -- "$RELEASE_TAG"
+
+  deploy-to-github-pages:
+    name: Deploy to GitHub Pages
+    needs: publish-release
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/configure-pages@v6
+      - uses: actions/download-artifact@v8
+        with:
+          name: wasm
+      - run: unzip "${{ env.package_name }}.zip" -d wasm-artifact
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: wasm-artifact
+      - id: deployment
+        uses: actions/deploy-pages@v5
