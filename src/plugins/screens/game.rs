@@ -20,8 +20,7 @@ use crate::{
                 Theme,
             },
         },
-        despawn_component,
-        nav::{EscapeNavState, NavButton, NavState},
+        nav::{nav_button_bundle, EscapeNavState, NavState},
         puzzles::classic::{classic_puzzle_bundle, ClassicGridState},
     },
     puzzles::{
@@ -34,9 +33,6 @@ use crate::{
 };
 
 use super::{PuzzleSettings, ScreenState};
-
-#[derive(Component)]
-pub struct GameContainer;
 
 #[derive(Component)]
 struct GamePuzzlePanel;
@@ -101,12 +97,7 @@ pub fn game_plugin(app: &mut App) {
         .add_systems(OnEnter(ScreenState::Game), game_setup)
         .add_systems(
             OnExit(ScreenState::Game),
-            (
-                restore_nav_button_layout,
-                despawn_component::<GameContainer>,
-                clear_classic_grid_state,
-                clear_game_timer,
-            ),
+            (clear_classic_grid_state, clear_game_timer),
         )
         .add_systems(
             Update,
@@ -138,28 +129,10 @@ fn game_setup(
     mut nav_state: ResMut<NextState<NavState>>,
     mut commands: Commands,
     puzzle_settings: Res<PuzzleSettings>,
-    mut nav_button_query: Query<(Entity, &mut Node), With<NavButton>>,
 ) {
     nav_state.set(NavState::Pause);
 
     commands.insert_resource(GameTimer::default());
-
-    let nav_button_entity = nav_button_query
-        .single_mut()
-        .map(|mut nav| {
-            nav.1.position_type = PositionType::Relative;
-            nav.1.left = Val::Auto;
-            nav.1.top = Val::Auto;
-            nav.1.width = Val::Px(80.0);
-            nav.1.height = Val::Px(60.0);
-            nav.1.justify_content = JustifyContent::Center;
-            nav.1.align_items = AlignItems::Center;
-            nav.1.flex_shrink = 0.0;
-            nav.1.margin = UiRect::all(Val::Px(0.0));
-            commands.entity(nav.0).insert(NavButtonGameLayout);
-            nav.0
-        })
-        .ok();
 
     let classic_grid = match puzzle_settings.puzzle_type {
         PuzzleType::Classic => {
@@ -178,7 +151,7 @@ fn game_setup(
 
     let container_entity = commands
         .spawn((
-            GameContainer,
+            DespawnOnExit(ScreenState::Game),
             Node {
                 width: Val::Percent(96.0),
                 height: Val::Percent(100.0),
@@ -209,13 +182,21 @@ fn game_setup(
         ))
         .id();
 
-    if let Some(nav_button_entity) = nav_button_entity {
-        commands
-            .entity(nav_button_entity)
-            .insert(ChildOf(header_entity));
-    }
-
     commands.entity(header_entity).with_children(|header| {
+        header.spawn((
+            NavButtonGameLayout,
+            nav_button_bundle(
+                Node {
+                    width: Val::Px(80.0),
+                    height: Val::Px(60.0),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    flex_shrink: 0.0,
+                    ..default()
+                },
+                NavState::Pause,
+            ),
+        ));
         if classic_grid.is_some() {
             header
                 .spawn((
@@ -329,25 +310,6 @@ fn clear_classic_grid_state(mut commands: Commands) {
 
 fn clear_game_timer(mut commands: Commands) {
     commands.remove_resource::<GameTimer>();
-}
-
-fn restore_nav_button_layout(
-    mut commands: Commands,
-    mut nav_query: Query<(Entity, &mut Node), With<NavButtonGameLayout>>,
-) {
-    if let Ok((entity, mut node)) = nav_query.single_mut() {
-        node.position_type = PositionType::Absolute;
-        node.left = Val::Px(20.0);
-        node.top = Val::Px(20.0);
-        node.width = Val::Px(80.0);
-        node.height = Val::Px(60.0);
-        node.justify_content = JustifyContent::FlexStart;
-        node.align_items = AlignItems::FlexStart;
-        node.flex_shrink = 1.0;
-        node.margin = UiRect::all(Val::Px(0.0));
-        commands.entity(entity).remove::<ChildOf>();
-        commands.entity(entity).remove::<NavButtonGameLayout>();
-    }
 }
 
 fn game_header_layout_system(

@@ -24,7 +24,6 @@ pub fn nav_plugin(app: &mut App) {
         .init_resource::<EscapeNavState>()
         .add_systems(Startup, nav_setup)
         .add_systems(Update, nav_visibility_system)
-        .add_systems(Update, nav_icon_system.run_if(state_changed::<NavState>))
         .add_systems(Update, nav_button_action)
         .add_systems(Update, nav_escape_system)
         .add_systems(PostUpdate, reset_escape_nav_state);
@@ -59,14 +58,30 @@ impl From<NavState> for String {
 pub struct NavButton;
 
 #[derive(Component)]
-#[require(Text, ThemedFontWeight::Regular, ThemedTextColor)]
-struct NavButtonIcon;
+struct MenuNavButton;
 
 fn nav_setup(mut commands: Commands) {
+    commands.spawn((
+        MenuNavButton,
+        Visibility::Hidden,
+        nav_button_bundle(
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(20.0),
+                top: Val::Px(20.0),
+                width: Val::Px(80.0),
+                height: Val::Px(60.0),
+                ..default()
+            },
+            NavState::Back,
+        ),
+    ));
+}
+
+pub(super) fn nav_button_bundle(node: Node, icon: NavState) -> impl Bundle {
     // TODO - use SVGs instead of text
     let nav_button_icon_bundle = (
-        NavButtonIcon,
-        Text::new(NavState::default()),
+        Text::new(icon),
         TextFont::from_font_size(50.0),
         ThemedFontWeight::Symbolic,
         ThemedTextColor,
@@ -79,27 +94,7 @@ fn nav_setup(mut commands: Commands) {
         },
     );
 
-    commands.spawn((
-        NavButton,
-        Node {
-            position_type: PositionType::Absolute,
-            left: Val::Px(20.0),
-            top: Val::Px(20.0),
-            width: Val::Px(80.0),
-            height: Val::Px(60.0),
-            ..default()
-        },
-        Visibility::Visible,
-        children![nav_button_icon_bundle],
-    ));
-}
-
-fn nav_icon_system(
-    mut nav_button_icon_query: Query<&mut Text, With<NavButtonIcon>>,
-    nav_state: Res<State<NavState>>,
-) {
-    let mut text = nav_button_icon_query.single_mut().unwrap();
-    text.0 = nav_state.get().to_string();
+    (NavButton, node, children![nav_button_icon_bundle])
 }
 
 fn nav_button_action(
@@ -124,14 +119,16 @@ fn nav_button_action(
 }
 
 fn nav_visibility_system(
-    mut nav_button_query: Query<&mut Visibility, With<NavButton>>,
+    mut nav_button_query: Query<&mut Visibility, With<MenuNavButton>>,
     nav_state: Res<State<NavState>>,
+    screen_state: Res<State<ScreenState>>,
 ) {
     let mut visibility = nav_button_query.single_mut().unwrap();
-    *visibility = if matches!(nav_state.get(), NavState::Hidden) {
-        Visibility::Hidden
-    } else {
+    *visibility = if *nav_state.get() == NavState::Back && *screen_state.get() != ScreenState::Game
+    {
         Visibility::Visible
+    } else {
+        Visibility::Hidden
     };
 }
 

@@ -18,7 +18,6 @@ use crate::{
                 text::{ThemedFontWeight, ThemedTextColor},
             },
         },
-        despawn_component,
         nav::NavState,
     },
     puzzles::PuzzleType,
@@ -29,20 +28,12 @@ use super::{PuzzleSettings, ScreenState, PIXELS_PER_CH};
 
 pub fn new_puzzle_menu_plugin(app: &mut App) {
     app.add_systems(OnEnter(ScreenState::NewPuzzle), new_puzzle_menu_setup)
-        .add_systems(
-            OnExit(ScreenState::NewPuzzle),
-            despawn_component::<NewMenuContainer>,
-        )
         .add_plugins((dropdown::dropdown_plugin, text_input_plugin))
         .add_systems(
             Update,
             (description_system, start_button_system).run_if(in_state(ScreenState::NewPuzzle)),
         );
 }
-
-#[derive(Component)]
-#[require(Node)]
-struct NewMenuContainer;
 
 #[derive(Component)]
 struct PuzzleTypeDropdown;
@@ -171,7 +162,7 @@ fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut command
     );
 
     commands.spawn((
-        NewMenuContainer,
+        DespawnOnExit(ScreenState::NewPuzzle),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
