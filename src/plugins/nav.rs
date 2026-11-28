@@ -86,7 +86,7 @@ fn nav_button_action(
     if interaction_query.iter().any(|(interaction, visibility)| {
         *interaction == Interaction::Pressed && *visibility != Visibility::Hidden
     }) {
-        next_screen.set(ScreenState::Home);
+        NextState::set_if_neq(&mut next_screen, ScreenState::Home);
     }
 }
 
@@ -184,7 +184,7 @@ mod tests {
             let world = app.world_mut();
             let returns_home = matches!(
                 world.resource::<NextState<ScreenState>>(),
-                NextState::Pending(ScreenState::Home)
+                NextState::PendingIfNeq(ScreenState::Home)
             );
             assert_eq!(returns_home, expected_visibility == Visibility::Visible);
             *world.get_mut::<Interaction>(menu_button).unwrap() = Interaction::None;

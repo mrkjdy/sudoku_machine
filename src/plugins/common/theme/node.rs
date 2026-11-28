@@ -15,6 +15,17 @@ pub struct ThemedBorderRadius;
 #[derive(Component, Default)]
 pub struct ThemedBorderRect;
 
+type ThemedBorderQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static mut Node,
+        Has<ThemedBorderRadius>,
+        Has<ThemedBorderRect>,
+    ),
+    Or<(With<ThemedBorderRadius>, With<ThemedBorderRect>)>,
+>;
+
 pub fn themed_node_plugin(app: &mut App) {
     app.add_systems(
         Update,
@@ -34,8 +45,7 @@ fn theme_changed_system(
         (&mut BackgroundColor, Option<&PuzzleCellKind>),
         With<ThemedBackgroundColor>,
     >,
-    mut border_radius_query: Query<&mut BorderRadius, With<ThemedBorderRadius>>,
-    mut node_query: Query<&mut Node, With<ThemedBorderRect>>,
+    mut node_query: ThemedBorderQuery,
 ) {
     for (mut background_color, kind) in &mut background_color_query {
         let is_given = kind.is_some_and(|k| matches!(k, PuzzleCellKind::Given));
@@ -46,12 +56,13 @@ fn theme_changed_system(
         };
     }
 
-    for mut border_radius in &mut border_radius_query {
-        *border_radius = theme.border_radius;
-    }
-
-    for mut node in &mut node_query {
-        node.border = theme.border_rect;
+    for (mut node, themed_radius, themed_rect) in &mut node_query {
+        if themed_radius {
+            node.border_radius = theme.border_radius;
+        }
+        if themed_rect {
+            node.border = theme.border_rect;
+        }
     }
 }
 
@@ -99,10 +110,10 @@ fn themed_border_color_system(
 
 fn themed_border_radius_added_system(
     theme: Res<Theme>,
-    mut border_radius_query: Query<&mut BorderRadius, Added<ThemedBorderRadius>>,
+    mut node_query: Query<&mut Node, Added<ThemedBorderRadius>>,
 ) {
-    for mut border_radius in &mut border_radius_query {
-        *border_radius = theme.border_radius;
+    for mut node in &mut node_query {
+        node.border_radius = theme.border_radius;
     }
 }
 

@@ -13,6 +13,18 @@ pub enum ThemedFontWeight {
     Symbolic,
 }
 
+impl ThemedFontWeight {
+    fn apply(self, theme: &Theme, text_font: &mut TextFont) {
+        let (font, weight) = match self {
+            Self::Regular => (&theme.text_font_regular, FontWeight::NORMAL),
+            Self::Bold => (&theme.text_font_bold, FontWeight::BOLD),
+            Self::Symbolic => (&theme.text_font_symbols, FontWeight::NORMAL),
+        };
+        text_font.font = font.clone();
+        text_font.weight = weight;
+    }
+}
+
 #[derive(Component, Default, Clone, Copy)]
 pub struct ThemedTextColor;
 
@@ -42,11 +54,7 @@ fn themed_text_change_system(
         text_input_cursor_background_color.0 = theme.text_color;
     }
     for (mut text_font, font_weight) in &mut themed_font_weight_query {
-        text_font.font = match font_weight {
-            ThemedFontWeight::Regular => theme.text_font_regular.clone(),
-            ThemedFontWeight::Bold => theme.text_font_bold.clone(),
-            ThemedFontWeight::Symbolic => theme.text_font_symbols.clone(),
-        };
+        font_weight.apply(&theme, &mut text_font);
     }
 }
 
@@ -71,10 +79,6 @@ fn themed_font_weight_system(
     >,
 ) {
     for (mut text_font, font_weight) in &mut themed_font_weight_query {
-        text_font.font = match font_weight {
-            ThemedFontWeight::Regular => theme.text_font_regular.clone(),
-            ThemedFontWeight::Bold => theme.text_font_bold.clone(),
-            ThemedFontWeight::Symbolic => theme.text_font_symbols.clone(),
-        };
+        font_weight.apply(&theme, &mut text_font);
     }
 }
