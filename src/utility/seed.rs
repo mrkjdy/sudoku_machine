@@ -1,10 +1,10 @@
-use rand::{Rng, RngCore};
+use rand::Rng;
 
-pub trait SeedRng: RngCore {
+pub trait SeedRng: Rng {
     #[inline]
     fn gen_seed(&mut self) -> String {
-        format!("{:016X}", self.random::<u64>())
+        format!("{:016X}", self.next_u64())
     }
 }
 
-impl<T: RngCore> SeedRng for T {}
+impl<T: Rng> SeedRng for T {}

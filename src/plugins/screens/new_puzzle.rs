@@ -239,3 +239,52 @@ fn start_button_system(
         next_screen_state.set(ScreenState::Game);
     }
 }
+
+#[cfg(all(test, target_family = "wasm"))]
+mod tests {
+    use super::*;
+    use crate::puzzles::classic::puzzle::ClassicPuzzle;
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    #[wasm_bindgen_test]
+    fn start_without_seed_generates_playable_puzzle() {
+        let mut app = App::new();
+        app.init_resource::<PuzzleSettings>()
+            .init_resource::<NextState<ScreenState>>()
+            .add_systems(Update, start_button_system);
+        let world = app.world_mut();
+        world.spawn((StartButton, Interaction::Pressed));
+        world.spawn((
+            PuzzleTypeDropdown,
+            DropdownContainer {
+                selected: PuzzleType::Classic as usize,
+                options: vec![PuzzleType::Classic.title().into()],
+            },
+        ));
+        let seed_input = world
+            .spawn((
+                SeedTextInput,
+                TextInputContainer {
+                    placeholder_text: "Random".into(),
+                    is_empty: true,
+                },
+            ))
+            .id();
+        world.spawn((Text::new("Random"), ChildOf(seed_input)));
+
+        app.update();
+
+        let seed = &app.world().resource::<PuzzleSettings>().seed;
+        assert_eq!(seed.len(), 16);
+        assert!(seed.bytes().all(|byte| byte.is_ascii_hexdigit()));
+        assert!(matches!(
+            app.world().resource::<NextState<ScreenState>>(),
+            NextState::Pending(ScreenState::Game)
+        ));
+        let puzzle = ClassicPuzzle::from_seed(seed);
+        assert_eq!(
+            ClassicPuzzle::count_solutions_bounded_iterative(puzzle, 2),
+            1
+        );
+    }
+}
