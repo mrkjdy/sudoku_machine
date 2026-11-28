@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use crate::puzzles::PuzzleType;
 
 mod game;
-mod history;
 mod home;
 mod new_puzzle;
 
@@ -19,7 +18,6 @@ pub fn screen_plugin(app: &mut App) {
         .add_plugins((
             home::home_menu_plugin,
             new_puzzle::new_puzzle_menu_plugin,
-            history::history_menu_plugin,
             game::game_plugin,
         ));
 }

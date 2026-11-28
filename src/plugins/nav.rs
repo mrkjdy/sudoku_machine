@@ -1,12 +1,10 @@
+use crate::plugins::screens::ScreenState;
 use bevy::{
     app::AppExit,
     input::{keyboard::Key, keyboard::KeyboardInput, ButtonState},
     input_focus::InputFocus,
     prelude::*,
 };
-use strum_macros::Display;
-
-use crate::plugins::screens::ScreenState;
 
 use super::common::{
     bundles::puzzle_cell::{puzzle_cell_input_system, PuzzleCellFocusCleared},
@@ -17,29 +15,10 @@ use super::common::{
 };
 
 pub fn nav_plugin(app: &mut App) {
-    app.init_state::<NavState>()
-        .add_message::<PuzzleCellFocusCleared>()
+    app.add_message::<PuzzleCellFocusCleared>()
         .add_systems(Startup, nav_setup)
-        .add_systems(Update, nav_visibility_system)
-        .add_systems(Update, nav_button_action)
+        .add_systems(Update, (nav_visibility_system, nav_button_action).chain())
         .add_systems(Update, nav_escape_system.after(puzzle_cell_input_system));
-}
-
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq, States, Display)]
-pub enum NavState {
-    #[default]
-    #[strum(to_string = " ")]
-    Hidden,
-    #[strum(to_string = "🡠")]
-    Back,
-    #[strum(to_string = "⏸")]
-    Pause,
-}
-
-impl From<NavState> for String {
-    fn from(value: NavState) -> Self {
-        value.to_string()
-    }
 }
 
 #[derive(Component)]
@@ -69,12 +48,12 @@ fn nav_setup(mut commands: Commands) {
                 height: Val::Px(60.0),
                 ..default()
             },
-            NavState::Back,
+            "🡠",
         ),
     ));
 }
 
-pub(super) fn nav_button_bundle(node: Node, icon: NavState) -> impl Bundle {
+pub(super) fn nav_button_bundle(node: Node, icon: &str) -> impl Bundle {
     // TODO - use SVGs instead of text
     let nav_button_icon_bundle = (
         Text::new(icon),
@@ -93,39 +72,36 @@ pub(super) fn nav_button_bundle(node: Node, icon: NavState) -> impl Bundle {
     (NavButton, node, children![nav_button_icon_bundle])
 }
 
+type NavButtonInteractionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (&'static Interaction, &'static Visibility),
+    (Changed<Interaction>, With<NavButton>),
+>;
+
 fn nav_button_action(
-    interaction_query: Query<&Interaction, (Changed<Interaction>, With<NavButton>)>,
-    nav_state: Res<State<NavState>>,
-    mut screen_state: ResMut<NextState<ScreenState>>,
+    interaction_query: NavButtonInteractionQuery,
+    mut next_screen: ResMut<NextState<ScreenState>>,
 ) {
-    for _ in interaction_query
-        .iter()
-        .filter(|interaction| **interaction == Interaction::Pressed)
-    {
-        match *nav_state.get() {
-            NavState::Back => {
-                screen_state.set(ScreenState::Home);
-            }
-            NavState::Hidden => {}
-            NavState::Pause => {
-                screen_state.set(ScreenState::Home);
-            }
-        }
+    if interaction_query.iter().any(|(interaction, visibility)| {
+        *interaction == Interaction::Pressed && *visibility != Visibility::Hidden
+    }) {
+        next_screen.set(ScreenState::Home);
     }
 }
 
 fn nav_visibility_system(
     mut nav_button_query: Query<&mut Visibility, With<MenuNavButton>>,
-    nav_state: Res<State<NavState>>,
     screen_state: Res<State<ScreenState>>,
 ) {
-    let mut visibility = nav_button_query.single_mut().unwrap();
-    *visibility = if *nav_state.get() == NavState::Back && *screen_state.get() != ScreenState::Game
-    {
-        Visibility::Visible
-    } else {
-        Visibility::Hidden
+    let visibility = match screen_state.get() {
+        ScreenState::NewPuzzle | ScreenState::History => Visibility::Visible,
+        ScreenState::Game | ScreenState::Home => Visibility::Hidden,
     };
+    nav_button_query
+        .single_mut()
+        .unwrap()
+        .set_if_neq(visibility);
 }
 
 fn nav_escape_system(
@@ -164,6 +140,54 @@ fn nav_escape_system(
                     next.set(ScreenState::Home);
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::state::app::StatesPlugin;
+
+    #[cfg_attr(not(target_family = "wasm"), test)]
+    #[cfg_attr(target_family = "wasm", wasm_bindgen_test::wasm_bindgen_test)]
+    fn navigation_buttons_follow_the_current_screen() {
+        let mut app = App::new();
+        app.add_plugins(StatesPlugin)
+            .init_state::<ScreenState>()
+            .add_message::<KeyboardInput>()
+            .add_plugins(nav_plugin);
+        app.update();
+
+        let world = app.world_mut();
+        let menu_button = world
+            .query_filtered::<Entity, With<MenuNavButton>>()
+            .single(world)
+            .unwrap();
+        for (screen, expected_visibility) in [
+            (ScreenState::Home, Visibility::Hidden),
+            (ScreenState::Game, Visibility::Hidden),
+            (ScreenState::NewPuzzle, Visibility::Visible),
+            (ScreenState::History, Visibility::Visible),
+        ] {
+            app.world_mut()
+                .resource_mut::<NextState<ScreenState>>()
+                .set(screen);
+            app.update();
+            let world = app.world_mut();
+            assert_eq!(
+                world.get::<Visibility>(menu_button),
+                Some(&expected_visibility)
+            );
+            *world.get_mut::<Interaction>(menu_button).unwrap() = Interaction::Pressed;
+            app.update();
+            let world = app.world_mut();
+            let returns_home = matches!(
+                world.resource::<NextState<ScreenState>>(),
+                NextState::Pending(ScreenState::Home)
+            );
+            assert_eq!(returns_home, expected_visibility == Visibility::Visible);
+            *world.get_mut::<Interaction>(menu_button).unwrap() = Interaction::None;
         }
     }
 }
