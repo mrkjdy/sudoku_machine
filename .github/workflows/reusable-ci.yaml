@@ -24,7 +24,7 @@ jobs:
           profile: minimal
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ runner.os }}-ci
+          shared-key: ${{ runner.os }}-test
           cache-on-failure: true
       - name: Install Dependencies
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
