@@ -6,6 +6,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.4.0](https://github.com/mrkjdy/sudoku_machine/compare/v0.3.0...v0.4.0) - 2026-11-28
+
+### Added
+
+- classic ui ([#93](https://github.com/mrkjdy/sudoku_machine/pull/93))
+
+### Fixed
+
+- packaging ([#134](https://github.com/mrkjdy/sudoku_machine/pull/134))
+
+### Other
+
+- upgrade to Bevy 0.18 and bevy_defer 0.17.0 ([#154](https://github.com/mrkjdy/sudoku_machine/pull/154))
+- store seed field's editable value separately from display text ([#151](https://github.com/mrkjdy/sudoku_machine/pull/151))
+- derive navigation from ScreenState ([#150](https://github.com/mrkjdy/sudoku_machine/pull/150))
+- use InputFocus ([#148](https://github.com/mrkjdy/sudoku_machine/pull/148))
+- deterministic Escape handling ([#145](https://github.com/mrkjdy/sudoku_machine/pull/145))
+- use DespawnOnExit ([#144](https://github.com/mrkjdy/sudoku_machine/pull/144))
+- upgrade Bevy to 0.17 and `bevy_defer` to 0.15.1 ([#143](https://github.com/mrkjdy/sudoku_machine/pull/143))
+- upgrade rand, rand_seeder, and getrandom ([#142](https://github.com/mrkjdy/sudoku_machine/pull/142))
+- upgrade wasm-bindgen-futures and add test ([#141](https://github.com/mrkjdy/sudoku_machine/pull/141))
+- upgrade rand ([#140](https://github.com/mrkjdy/sudoku_machine/pull/140))
+- split pre-submit, post-submit, and release workflows ([#139](https://github.com/mrkjdy/sudoku_machine/pull/139))
+- don't optimize as much on regular prs ([#137](https://github.com/mrkjdy/sudoku_machine/pull/137))
+- separate workflow for benchmarks ([#136](https://github.com/mrkjdy/sudoku_machine/pull/136))
+- package on release prs and create draft ([#135](https://github.com/mrkjdy/sudoku_machine/pull/135))
+- upgrade to rust 1.100.0 ([#133](https://github.com/mrkjdy/sudoku_machine/pull/133))
+- *(deps)* bump actions/checkout from 6 to 7 ([#132](https://github.com/mrkjdy/sudoku_machine/pull/132))
+- *(deps)* bump rand from 0.9.2 to 0.9.3 ([#131](https://github.com/mrkjdy/sudoku_machine/pull/131))
+- *(deps)* bump actions/upload-pages-artifact from 4 to 5 ([#130](https://github.com/mrkjdy/sudoku_machine/pull/130))
+- *(deps)* bump actions/configure-pages from 5 to 6 ([#129](https://github.com/mrkjdy/sudoku_machine/pull/129))
+- *(deps)* bump actions/deploy-pages from 4 to 5 ([#128](https://github.com/mrkjdy/sudoku_machine/pull/128))
+- *(deps)* bump mshick/add-pr-comment from 2 to 3 ([#127](https://github.com/mrkjdy/sudoku_machine/pull/127))
+- *(deps)* bump actions/upload-artifact from 6 to 7 ([#126](https://github.com/mrkjdy/sudoku_machine/pull/126))
+- *(deps)* bump actions/download-artifact from 7 to 8 ([#125](https://github.com/mrkjdy/sudoku_machine/pull/125))
+- *(deps)* bump bytes from 1.10.1 to 1.11.1 ([#124](https://github.com/mrkjdy/sudoku_machine/pull/124))
+- *(deps)* bump actions/upload-artifact from 5 to 6 ([#117](https://github.com/mrkjdy/sudoku_machine/pull/117))
+- *(deps)* bump actions/download-artifact from 6 to 7 ([#118](https://github.com/mrkjdy/sudoku_machine/pull/118))
+- *(deps)* bump wasm-bindgen-futures from 0.4.55 to 0.4.56 ([#116](https://github.com/mrkjdy/sudoku_machine/pull/116))
+- *(deps)* bump actions/checkout from 5 to 6 ([#115](https://github.com/mrkjdy/sudoku_machine/pull/115))
+- document run commands and wasm-bindgen stuff ([#113](https://github.com/mrkjdy/sudoku_machine/pull/113))
+- disable non-classic modes for now ([#110](https://github.com/mrkjdy/sudoku_machine/pull/110))
+- *(deps)* bump wasm-bindgen-futures from 0.4.54 to 0.4.55 ([#107](https://github.com/mrkjdy/sudoku_machine/pull/107))
+- optimize caching ([#109](https://github.com/mrkjdy/sudoku_machine/pull/109))
+- *(deps)* bump indoc from 2.0.6 to 2.0.7 ([#103](https://github.com/mrkjdy/sudoku_machine/pull/103))
+- switch x86 macos runner to macos-15-intel ([#108](https://github.com/mrkjdy/sudoku_machine/pull/108))
+- *(deps)* bump actions/upload-artifact from 4 to 5 ([#106](https://github.com/mrkjdy/sudoku_machine/pull/106))
+- *(deps)* bump actions/download-artifact from 5 to 6 ([#105](https://github.com/mrkjdy/sudoku_machine/pull/105))
+- *(deps)* bump getrandom from 0.3.3 to 0.3.4 ([#101](https://github.com/mrkjdy/sudoku_machine/pull/101))
+- *(deps)* bump num_enum from 0.7.4 to 0.7.5 ([#102](https://github.com/mrkjdy/sudoku_machine/pull/102))
+
 ## [0.3.0](https://github.com/mrkjdy/sudoku_machine/compare/v0.2.0...v0.3.0) - 2025-09-29
 
 ### Added
