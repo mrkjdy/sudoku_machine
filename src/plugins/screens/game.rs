@@ -21,7 +21,7 @@ use crate::{
                 Theme,
             },
         },
-        nav::{nav_button_bundle, NavState},
+        nav::nav_button_bundle,
         puzzles::classic::{classic_puzzle_bundle, ClassicGridState},
     },
     puzzles::{
@@ -126,13 +126,7 @@ pub fn game_plugin(app: &mut App) {
         );
 }
 
-fn game_setup(
-    mut nav_state: ResMut<NextState<NavState>>,
-    mut commands: Commands,
-    puzzle_settings: Res<PuzzleSettings>,
-) {
-    nav_state.set(NavState::Pause);
-
+fn game_setup(mut commands: Commands, puzzle_settings: Res<PuzzleSettings>) {
     commands.insert_resource(GameTimer::default());
 
     let classic_grid = match puzzle_settings.puzzle_type {
@@ -192,7 +186,7 @@ fn game_setup(
                     flex_shrink: 0.0,
                     ..default()
                 },
-                NavState::Pause,
+                "⏸",
             ),
         ));
         if classic_grid.is_some() {

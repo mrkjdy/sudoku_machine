@@ -3,14 +3,9 @@ use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter};
 
 use crate::{
-    plugins::{
-        common::theme::{
-            node::{
-                ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect,
-            },
-            text::{ThemedFontWeight, ThemedTextColor},
-        },
-        nav::NavState,
+    plugins::common::theme::{
+        node::{ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect},
+        text::{ThemedFontWeight, ThemedTextColor},
     },
     APP_TITLE,
 };
@@ -40,9 +35,7 @@ enum HomeMenuButton {
     History,
 }
 
-fn home_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Commands) {
-    nav_state.set(NavState::Hidden);
-
+fn home_menu_setup(mut commands: Commands) {
     let title_bundle = (
         Text::new(APP_TITLE),
         TextFont::from_font_size(80.0),

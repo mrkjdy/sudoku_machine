@@ -2,23 +2,19 @@ use bevy::prelude::*;
 use strum::IntoEnumIterator;
 
 use crate::{
-    plugins::{
-        common::{
-            bundles::{
-                dropdown::{self, dropdown_bundle, DropdownBundleOptions, DropdownContainer},
-                text_input::{
-                    text_input_bundle, text_input_plugin, TextInputBundleOptions,
-                    TextInputContainer,
-                },
-            },
-            theme::{
-                node::{
-                    ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect,
-                },
-                text::{ThemedFontWeight, ThemedTextColor},
+    plugins::common::{
+        bundles::{
+            dropdown::{self, dropdown_bundle, DropdownBundleOptions, DropdownContainer},
+            text_input::{
+                text_input_bundle, text_input_plugin, TextInputBundleOptions, TextInputContainer,
             },
         },
-        nav::NavState,
+        theme::{
+            node::{
+                ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect,
+            },
+            text::{ThemedFontWeight, ThemedTextColor},
+        },
     },
     puzzles::PuzzleType,
     utility::seed::SeedRng,
@@ -55,9 +51,7 @@ struct SeedTextInput;
 )]
 struct StartButton;
 
-fn new_puzzle_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Commands) {
-    nav_state.set(NavState::Back);
-
+fn new_puzzle_menu_setup(mut commands: Commands) {
     // Common node values
     let width = Val::Percent(96.0);
     let max_width = Val::Px(65.0 * PIXELS_PER_CH);
