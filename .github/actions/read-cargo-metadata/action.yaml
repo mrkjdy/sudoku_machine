@@ -1,0 +1,34 @@
+name: Read Cargo metadata
+description: Read the default Cargo package name, binary name, and version.
+
+outputs:
+  package_name:
+    description: Cargo package name
+    value: ${{ steps.metadata.outputs.package_name }}
+  binary_name:
+    description: Default or sole binary target name
+    value: ${{ steps.metadata.outputs.binary_name }}
+  version:
+    description: Cargo package version
+    value: ${{ steps.metadata.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Read package metadata
+      id: metadata
+      shell: bash
+      run: |
+        cargo metadata --locked --no-deps --format-version 1 |
+          jq -er '
+            .workspace_default_members as $default_members
+            | [.packages[] | select(.id as $id | $default_members | index($id))]
+            | if length == 1 then .[0] else error("Expected one default Cargo package") end
+            | . as $package
+            | [.targets[] | select(.kind | index("bin")) | .name] as $binaries
+            | (.default_run // (
+                if ($binaries | length) == 1 then $binaries[0]
+                else error("Expected one binary target or a default-run binary") end
+              )) as $binary
+            | "package_name=\($package.name)", "binary_name=\($binary)", "version=\($package.version)"
+          ' >> "$GITHUB_OUTPUT"

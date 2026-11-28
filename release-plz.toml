@@ -1,6 +1,7 @@
 [workspace]
 release_always = false
 git_release_draft = true
+pr_labels = ["requires:release-dry-run"]
 
 [changelog]
 header = """# Changelog

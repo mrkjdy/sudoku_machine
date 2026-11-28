@@ -1,10 +1,11 @@
-name: Benchmarks
+name: Bench
 
 on:
   pull_request:
     branches: [main]
     types: [opened, reopened, synchronize, labeled]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -16,11 +17,11 @@ jobs:
   bench:
     name: Bench
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.action == 'labeled' && github.event.label.name == 'requires:benchmarks') ||
-      (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'requires:benchmarks'))
+      github.event_name != 'pull_request' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'requires:bench') ||
+      (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'requires:bench'))
     concurrency:
-      group: benchmarks-${{ github.event.pull_request.number || github.run_id }}
+      group: bench-${{ github.event.pull_request.number || github.run_id }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -40,7 +41,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
-      - name: Run benchmarks
+      - name: Run bench
         shell: bash
         run: |
           echo '## Benchmark results' >> "$GITHUB_STEP_SUMMARY"

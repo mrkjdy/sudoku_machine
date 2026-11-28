@@ -1,0 +1,160 @@
+name: Build
+
+on:
+  workflow_call:
+    outputs:
+      package_name:
+        description: Cargo package name used for the uploaded package
+        value: ${{ jobs.build.outputs.package_name }}
+    inputs:
+      target:
+        description: Rust target triple
+        required: true
+        type: string
+      mode:
+        description: Build a binary (build) or upload a release package (package)
+        required: true
+        type: string
+      ref:
+        description: Source ref to build. Defaults to the triggering commit.
+        type: string
+      sign:
+        description: Sign a macOS release package
+        type: boolean
+        default: false
+    secrets:
+      MACOS_BUILD_CERTIFICATE_BASE64:
+        required: false
+      MACOS_P12_PASSWORD:
+        required: false
+      MACOS_KEYCHAIN_PASSWORD:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: >-
+      ${{ fromJSON('{
+        "wasm32-unknown-unknown": "ubuntu-latest",
+        "x86_64-unknown-linux-gnu": "ubuntu-latest",
+        "x86_64-pc-windows-msvc": "windows-latest",
+        "aarch64-apple-darwin": "macos-latest",
+        "x86_64-apple-darwin": "macos-15-intel"
+      }')[inputs.target] || 'ubuntu-latest' }}
+    env:
+      app_name: Sudoku Machine
+      build_target: ${{ inputs.target }}
+      build_profile: ${{ inputs.mode == 'package' && 'release' || 'ci' }}
+      artifact_name: >-
+        ${{ fromJSON('{
+          "wasm32-unknown-unknown": "wasm",
+          "x86_64-unknown-linux-gnu": "linux",
+          "x86_64-pc-windows-msvc": "windows",
+          "aarch64-apple-darwin": "macOS-apple-silicon",
+          "x86_64-apple-darwin": "macOS-intel"
+        }')[inputs.target] }}
+    outputs:
+      package_name: ${{ steps.cargo.outputs.package_name }}
+    steps:
+
+      - name: Validate build inputs
+        shell: bash
+        env:
+          BUILD_MODE: ${{ inputs.mode }}
+          SIGN: ${{ inputs.sign }}
+        run: |
+          if [[ -z "$artifact_name" || ( "$BUILD_MODE" != build && "$BUILD_MODE" != package ) ]]; then
+            echo "::error::Unsupported build target or mode ($build_target, $BUILD_MODE)"
+            exit 1
+          fi
+          if [[ "$SIGN" == true && ( "$artifact_name" != macOS-* || "$BUILD_MODE" != package ) ]]; then
+            echo "::error::Signing requires a macOS package build"
+            exit 1
+          fi
+
+      - name: Checkout sources
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: ./.github/actions/install-rust-toolchain
+        with:
+          profile: minimal
+          targets: ${{ inputs.target }}
+
+      - name: Read Cargo metadata
+        id: cargo
+        if: inputs.mode == 'package'
+        uses: ./.github/actions/read-cargo-metadata
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ runner.os }}-${{ inputs.target }}${{ inputs.mode == 'build' && '-ci' || '' }}
+          cache-on-failure: true
+
+      - name: Install Linux dependencies
+        if: env.artifact_name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install \
+            pkg-config libx11-dev libasound2-dev libudev-dev libxcb-render0-dev libxcb-shape0-dev \
+            libxcb-xfixes0-dev
+
+      - name: Build
+        shell: bash
+        run: |
+          args=(--locked --profile "$build_profile" --target "$build_target")
+          if [[ "$artifact_name" == wasm ]]; then
+            args+=(--features bevy/webgpu)
+          fi
+          cargo build "${args[@]}"
+
+      - name: Install macOS code signing certificate
+        if: inputs.sign
+        shell: bash
+        env:
+          MACOS_BUILD_CERTIFICATE_BASE64: ${{ secrets.MACOS_BUILD_CERTIFICATE_BASE64 }}
+          MACOS_P12_PASSWORD: ${{ secrets.MACOS_P12_PASSWORD }}
+          MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          set -u
+          certificate="$RUNNER_TEMP/build_certificate.p12"
+          keychain="$RUNNER_TEMP/app-signing.keychain-db"
+
+          printf '%s' "$MACOS_BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$certificate"
+          security create-keychain -p "$MACOS_KEYCHAIN_PASSWORD" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$MACOS_KEYCHAIN_PASSWORD" "$keychain"
+          security import "$certificate" -P "$MACOS_P12_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$MACOS_KEYCHAIN_PASSWORD" "$keychain"
+          security list-keychain -d user -s "$keychain"
+
+      - name: Package ${{ env.artifact_name }}
+        if: inputs.mode == 'package'
+        uses: ./.github/actions/package-build
+        with:
+          artifact-name: ${{ env.artifact_name }}
+          package-name: ${{ steps.cargo.outputs.package_name }}
+          binary-name: ${{ steps.cargo.outputs.binary_name }}
+          version: ${{ steps.cargo.outputs.version }}
+          target: ${{ inputs.target }}
+          app-name: ${{ env.app_name }}
+          signing-identity: ${{ inputs.sign && 'mrkjdy-sudoku_machine' || '' }}
+
+      - name: Upload package artifact
+        if: inputs.mode == 'package'
+        uses: actions/upload-artifact@v7
+        with:
+          path: >-
+            ${{ startsWith(env.artifact_name, 'macOS-')
+                && format('{0}-{1}.dmg', steps.cargo.outputs.package_name, env.artifact_name)
+                || format('{0}.zip', steps.cargo.outputs.package_name) }}
+          name: ${{ env.artifact_name }}
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7

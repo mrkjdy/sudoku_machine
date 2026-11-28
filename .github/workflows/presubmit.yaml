@@ -1,0 +1,17 @@
+name: Pre-submit
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: presubmit-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Checks
+    uses: ./.github/workflows/reusable-ci.yaml

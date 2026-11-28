@@ -1,0 +1,77 @@
+name: Package build
+description: Create the release archive or disk image for a compiled Sudoku Machine binary.
+inputs:
+  artifact-name:
+    description: Platform artifact name used for the package
+    required: true
+  package-name:
+    description: Release package base name
+    required: true
+  binary-name:
+    description: Compiled Cargo binary name
+    required: true
+  version:
+    description: Cargo package version
+    required: true
+  target:
+    description: Rust target triple used for the build
+    required: true
+  app-name:
+    description: macOS app display name
+    required: false
+    default: Sudoku Machine
+  signing-identity:
+    description: Optional identity available in the macOS keychain
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Reject unsupported artifact names
+      if: ${{ !contains(fromJSON('["wasm", "linux", "windows", "macOS-apple-silicon", "macOS-intel"]'), inputs.artifact-name) }}
+      shell: bash
+      env:
+        ARTIFACT_NAME: ${{ inputs.artifact-name }}
+      run: |
+        printf 'Unsupported package artifact: %s\n' "$ARTIFACT_NAME" >&2
+        exit 1
+
+    - name: Package Linux or Wasm
+      if: inputs.artifact-name == 'linux' || inputs.artifact-name == 'wasm'
+      shell: bash
+      env:
+        ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        PACKAGE_NAME: ${{ inputs.package-name }}
+        BINARY_NAME: ${{ inputs.binary-name }}
+        BUILD_TARGET: ${{ inputs.target }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: bash "$ACTION_PATH/package-$ARTIFACT_NAME.sh" "$PACKAGE_NAME" "$BINARY_NAME" "$BUILD_TARGET"
+
+    - name: Package Windows
+      if: inputs.artifact-name == 'windows'
+      shell: pwsh
+      env:
+        PACKAGE_NAME: ${{ inputs.package-name }}
+        BINARY_NAME: ${{ inputs.binary-name }}
+        BUILD_TARGET: ${{ inputs.target }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        & "$env:ACTION_PATH/package-windows.ps1" -PackageName $env:PACKAGE_NAME -BinaryName $env:BINARY_NAME -BuildTarget $env:BUILD_TARGET
+
+    - name: Package macOS
+      if: inputs.artifact-name == 'macOS-apple-silicon' || inputs.artifact-name == 'macOS-intel'
+      shell: bash
+      env:
+        APP_NAME: ${{ inputs.app-name }}
+        ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        PACKAGE_NAME: ${{ inputs.package-name }}
+        BINARY_NAME: ${{ inputs.binary-name }}
+        PACKAGE_VERSION: ${{ inputs.version }}
+        BUILD_TARGET: ${{ inputs.target }}
+        SIGNING_IDENTITY: ${{ inputs.signing-identity }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        brew install create-dmg
+        bash "$ACTION_PATH/package-macos.sh" "$APP_NAME" "$PACKAGE_NAME" "$BINARY_NAME" \
+          "$BUILD_TARGET" "$ARTIFACT_NAME" "$PACKAGE_VERSION"
