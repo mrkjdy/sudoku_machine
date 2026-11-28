@@ -2,7 +2,7 @@ use arrayvec::ArrayVec;
 use indoc::indoc;
 use rand::{
     seq::{IteratorRandom, SliceRandom},
-    Rng,
+    Rng, RngExt,
 };
 use rand_seeder::{SipHasher, SipRng};
 use std::fmt::Display;
@@ -791,6 +791,25 @@ mod tests {
     use crate::utility::seed::SeedRng;
 
     const SEED: &str = "test";
+
+    #[cfg_attr(not(target_family = "wasm"), test)]
+    #[cfg_attr(target_family = "wasm", wasm_bindgen_test::wasm_bindgen_test)]
+    fn existing_seed_preserves_puzzle() {
+        let expected = indoc! {"
+            5 . . | . . . | . . 7
+            3 . . | 2 . . | . . 4
+            9 . 1 | . 8 6 | . . .
+            ------|-------|------
+            4 . . | . . . | . 3 .
+            . 2 . | . . . | . 4 1
+            . . . | . 3 7 | 8 . .
+            ------|-------|------
+            2 . . | . . 5 | . 9 .
+            . . . | 6 . 1 | . 5 .
+            . . 5 | . . . | . . .
+        "};
+        assert_eq!(ClassicPuzzle::from_seed(SEED).to_string(), expected);
+    }
 
     const SEED_PUZZLE_SOLUTION_STR: &str = indoc! {"
         5 6 2 | 1 4 3 | 9 8 7

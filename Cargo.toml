@@ -14,8 +14,8 @@ dark-light = "2.0"
 fastrand = "2.1.1"
 indoc = "2.0.7"
 num_enum = "0.7.5"
-rand = "0.9"
-rand_seeder = "0.4"
+rand = "0.10"
+rand_seeder = "0.5"
 strum = "0.27.2"
 strum_macros = "0.27.2"
 
@@ -29,7 +29,7 @@ futures-util = { version = "0.3.31", features = ["io"] }
 arboard = "3.6.1"
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-getrandom = { version = "0.3", features = ["wasm_js"] }
+getrandom = { version = "0.4", features = ["wasm_js"] }
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["Clipboard", "Navigator", "Window", "console"] }
 wasm-bindgen-futures = "0.4"

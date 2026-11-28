@@ -1,8 +1,7 @@
 use std::time::Duration;
 
 use divan::{bench, Bencher};
-use rand::Rng;
-use rand::RngCore;
+use rand::{RngExt, TryRng};
 use rand_seeder::{SipHasher, SipRng};
 use sudoku_machine::puzzles::classic::puzzle::ClassicPuzzle;
 use sudoku_machine::utility::seed::SeedRng;
@@ -13,17 +12,20 @@ fn main() {
 
 struct MyRng(fastrand::Rng);
 
-impl RngCore for MyRng {
-    fn next_u32(&mut self) -> u32 {
-        self.0.u32(..)
+impl TryRng for MyRng {
+    type Error = !;
+
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+        Ok(self.0.u32(..))
     }
 
-    fn next_u64(&mut self) -> u64 {
-        self.0.u64(..)
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+        Ok(self.0.u64(..))
     }
 
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
-        self.0.fill(dest)
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Self::Error> {
+        self.0.fill(dest);
+        Ok(())
     }
 }
 
@@ -207,8 +209,7 @@ fn from_seed_recursive(bencher: Bencher) {
     bencher
         .with_inputs(|| {
             let mut rng = create_random_my_rng();
-            let seed = rng.gen_seed();
-            seed
+            rng.gen_seed()
         })
         .bench_values(|seed| {
             let _ = ClassicPuzzle::from_seed(&seed);
