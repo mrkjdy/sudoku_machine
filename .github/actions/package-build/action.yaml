@@ -13,6 +13,9 @@ inputs:
   version:
     description: Cargo package version
     required: true
+  wasm-bindgen-version:
+    description: Locked wasm-bindgen version required for Wasm packaging
+    required: false
   target:
     description: Rust target triple used for the build
     required: true
@@ -45,6 +48,7 @@ runs:
         PACKAGE_NAME: ${{ inputs.package-name }}
         BINARY_NAME: ${{ inputs.binary-name }}
         BUILD_TARGET: ${{ inputs.target }}
+        WASM_BINDGEN_VERSION: ${{ inputs.wasm-bindgen-version }}
         ACTION_PATH: ${{ github.action_path }}
       run: bash "$ACTION_PATH/package-$ARTIFACT_NAME.sh" "$PACKAGE_NAME" "$BINARY_NAME" "$BUILD_TARGET"
 

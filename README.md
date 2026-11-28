@@ -39,6 +39,24 @@ cargo install -f wasm-bindgen-cli@<wasm-bindgen version> wasm-server-runner
 
 Check the version of `wasm-bindgen` installed in [Cargo.lock](Cargo.lock) to determine which version of `wasm-bindgen-cli` to install. It's important to reinstall `wasm-server-runner` when updating `wasm-bindgen-cli` because `wasm-server-runner` builds using your installed version of `wasm-bindgen`.
 
+### Browser tests for Wasm
+
+Install Chrome and a matching [ChromeDriver](https://developer.chrome.com/docs/chromedriver/downloads).
+Put ChromeDriver on your PATH or set `CHROMEDRIVER` to its executable.
+Install the `wasm-bindgen-test-runner` from the same version of
+`wasm-bindgen-cli` as the `wasm-bindgen` crate in `Cargo.lock`.
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install --locked --bin wasm-bindgen-test-runner --version 0.2.108 wasm-bindgen-cli
+CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER=wasm-bindgen-test-runner \
+  WASM_BINDGEN_USE_BROWSER=1 \
+  cargo test --locked --lib --profile ci --target wasm32-unknown-unknown --features bevy/webgpu
+```
+
+The clipboard test runs in headless Chrome with a simulated clipboard. It checks
+that a rejected write stays queued and is retried on the next pointer release.
+
 ### License Information
 
 All source code in this repository is licensed under the **MIT License**. See
