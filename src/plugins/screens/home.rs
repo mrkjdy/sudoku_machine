@@ -10,7 +10,6 @@ use crate::{
             },
             text::{ThemedFontWeight, ThemedTextColor},
         },
-        despawn_component,
         nav::NavState,
     },
     APP_TITLE,
@@ -23,16 +22,8 @@ pub fn home_menu_plugin(app: &mut App) {
         .add_systems(
             Update,
             (home_menu_action_system).run_if(in_state(ScreenState::Home)),
-        )
-        .add_systems(
-            OnExit(ScreenState::Home),
-            despawn_component::<HomeMenuContainer>,
         );
 }
-
-#[derive(Component)]
-#[require(Node)]
-struct HomeMenuContainer;
 
 #[derive(Component, EnumIter, Display)]
 #[require(
@@ -85,7 +76,7 @@ fn home_menu_setup(mut nav_state: ResMut<NextState<NavState>>, mut commands: Com
     });
 
     commands.spawn((
-        HomeMenuContainer,
+        DespawnOnExit(ScreenState::Home),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
