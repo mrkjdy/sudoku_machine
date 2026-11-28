@@ -11,8 +11,8 @@ env:
 
 # TODO: Add a browser-based test-wasm job. https://github.com/mrkjdy/sudoku_machine/issues/138
 jobs:
-  test:
-    name: Test
+  rust:
+    name: Rust
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -22,50 +22,23 @@ jobs:
         uses: ./.github/actions/install-rust-toolchain
         with:
           profile: minimal
+          components: clippy,rustfmt
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ runner.os }}-test
-          cache-on-failure: true
-      - name: Install Dependencies
-        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
-      - name: Run cargo test
-        run: cargo test
-
-  clippy_check:
-    name: Clippy
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v7
-      - name: Install Rust toolchain
-        uses: ./.github/actions/install-rust-toolchain
-        with:
-          profile: minimal
-          components: clippy
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ runner.os }}-ci
-          cache-on-failure: true
-      - name: Install Dependencies
-        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
-      - name: Run clippy
-        run: cargo clippy -- -D warnings
-
-  format:
-    name: Format
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v7
-      - name: Install Rust toolchain
-        uses: ./.github/actions/install-rust-toolchain
-        with:
-          profile: minimal
-          components: rustfmt
+          shared-key: rust-ci
+      - name: Install dependencies
+        id: dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
       - name: Run cargo fmt
         run: cargo fmt --all --check
+      - name: Run cargo clippy
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: cargo clippy -- -D warnings
+      - name: Run cargo test
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: cargo test
 
   lint_github:
     name: Actionlint + ShellCheck
