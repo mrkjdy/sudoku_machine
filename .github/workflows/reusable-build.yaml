@@ -91,6 +91,8 @@ jobs:
         id: cargo
         if: inputs.mode == 'package'
         uses: ./.github/actions/read-cargo-metadata
+        with:
+          read-wasm-bindgen-version: ${{ env.artifact_name == 'wasm' }}
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -142,6 +144,7 @@ jobs:
           package-name: ${{ steps.cargo.outputs.package_name }}
           binary-name: ${{ steps.cargo.outputs.binary_name }}
           version: ${{ steps.cargo.outputs.version }}
+          wasm-bindgen-version: ${{ steps.cargo.outputs.wasm_bindgen_version }}
           target: ${{ inputs.target }}
           app-name: ${{ env.app_name }}
           signing-identity: ${{ inputs.sign && 'mrkjdy-sudoku_machine' || '' }}

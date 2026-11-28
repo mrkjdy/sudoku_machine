@@ -5,18 +5,7 @@ package_name="$1"
 binary_name="$2"
 build_target="$3"
 
-version="$(python3 - <<'PY'
-import tomllib
-
-with open("Cargo.lock", "rb") as lockfile:
-    packages = tomllib.load(lockfile)["package"]
-versions = {package["version"] for package in packages if package["name"] == "wasm-bindgen"}
-if len(versions) != 1:
-    raise SystemExit("Expected exactly one wasm-bindgen version in Cargo.lock")
-print(versions.pop())
-PY
-)"
-cargo install --locked --version "$version" wasm-bindgen-cli
+cargo install --locked --version "=${WASM_BINDGEN_VERSION:?Expected the locked wasm-bindgen version}" wasm-bindgen-cli
 # Keep the module name imported by wasm/index.html.
 wasm-bindgen \
   --out-name sudoku_machine \

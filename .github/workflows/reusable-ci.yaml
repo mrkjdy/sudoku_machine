@@ -9,7 +9,6 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
 
-# TODO: Add a browser-based test-wasm job. https://github.com/mrkjdy/sudoku_machine/issues/138
 jobs:
   rust:
     name: Rust
@@ -18,14 +17,19 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install Rust toolchain
+        id: toolchain
         uses: ./.github/actions/install-rust-toolchain
         with:
           profile: minimal
           components: clippy,rustfmt
+          targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: rust-ci
+          cache-bin: true
       - name: Install dependencies
         id: dependencies
         run: |
@@ -39,6 +43,28 @@ jobs:
       - name: Run cargo test
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         run: cargo test
+      - name: Read Cargo metadata
+        id: cargo
+        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' }}
+        uses: ./.github/actions/read-cargo-metadata
+        with:
+          read-wasm-bindgen-version: 'true'
+      - name: Install matching wasm-bindgen test runner
+        id: wasm-runner
+        if: ${{ !cancelled() && steps.cargo.outcome == 'success' }}
+        shell: bash
+        env:
+          WASM_BINDGEN_VERSION: ${{ steps.cargo.outputs.wasm_bindgen_version }}
+        run: cargo install --locked --version "=$WASM_BINDGEN_VERSION" --bin wasm-bindgen-test-runner wasm-bindgen-cli
+      - name: Run browser tests in headless Chrome
+        if: ${{ !cancelled() && steps.wasm-runner.outcome == 'success' }}
+        shell: bash
+        env:
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
+          WASM_BINDGEN_USE_BROWSER: "1"
+        run: |
+          export CHROMEDRIVER="${CHROMEWEBDRIVER}/chromedriver"
+          cargo test --locked --lib --profile ci --target wasm32-unknown-unknown --features bevy/webgpu
 
   github:
     name: GitHub

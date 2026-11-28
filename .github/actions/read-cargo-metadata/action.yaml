@@ -1,6 +1,11 @@
 name: Read Cargo metadata
 description: Read the default Cargo package name, binary name, and version.
 
+inputs:
+  read-wasm-bindgen-version:
+    description: Read the locked wasm-bindgen version for Wasm tooling
+    default: "false"
+
 outputs:
   package_name:
     description: Cargo package name
@@ -11,6 +16,9 @@ outputs:
   version:
     description: Cargo package version
     value: ${{ steps.metadata.outputs.version }}
+  wasm_bindgen_version:
+    description: Locked wasm-bindgen crate version
+    value: ${{ steps.wasm-bindgen.outputs.version }}
 
 runs:
   using: composite
@@ -32,3 +40,19 @@ runs:
               )) as $binary
             | "package_name=\($package.name)", "binary_name=\($binary)", "version=\($package.version)"
           ' >> "$GITHUB_OUTPUT"
+
+    - name: Read locked wasm-bindgen version
+      id: wasm-bindgen
+      if: inputs.read-wasm-bindgen-version == 'true'
+      shell: bash
+      run: |
+        python3 - <<'PYTHON' >> "$GITHUB_OUTPUT"
+        import tomllib
+
+        with open("Cargo.lock", "rb") as lockfile:
+            packages = tomllib.load(lockfile)["package"]
+        versions = {package["version"] for package in packages if package["name"] == "wasm-bindgen"}
+        if len(versions) != 1:
+            raise SystemExit("Expected exactly one wasm-bindgen version in Cargo.lock")
+        print(f"version={versions.pop()}")
+        PYTHON

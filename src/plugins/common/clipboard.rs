@@ -214,3 +214,70 @@ pub fn clipboard_plugin(app: &mut App) {
     }
     app.init_resource::<ClipboardResource>();
 }
+
+#[cfg(all(test, target_family = "wasm"))]
+mod tests {
+    use super::*;
+    use wasm_bindgen::prelude::wasm_bindgen;
+    use wasm_bindgen_test::*;
+
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[wasm_bindgen(inline_js = "
+        export function reject_first_clipboard_write() {
+            const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+            const writes = [];
+            Object.defineProperty(navigator, 'clipboard', {
+                configurable: true,
+                value: {
+                    writeText(text) {
+                        writes.push(text);
+                        return writes.length === 1
+                            ? Promise.reject(new DOMException('Test rejection', 'NotAllowedError'))
+                            : Promise.resolve();
+                    },
+                },
+            });
+            return () => {
+                if (original) Object.defineProperty(navigator, 'clipboard', original);
+                else delete navigator.clipboard;
+                return writes;
+            };
+        }
+
+        export function next_browser_task() {
+            return new Promise(resolve => setTimeout(resolve, 0));
+        }
+    ")]
+    extern "C" {
+        fn reject_first_clipboard_write() -> js_sys::Function;
+        fn next_browser_task() -> js_sys::Promise;
+    }
+
+    #[wasm_bindgen_test]
+    async fn rejected_copy_retries_on_pointer_up() {
+        let restore_clipboard = reject_first_clipboard_write();
+        let mut clipboard = ClipboardResource;
+        clipboard.copy("example-seed");
+        JsFuture::from(next_browser_task()).await.unwrap();
+
+        let queued_before_pointer_up = PENDING_COPY_TEXT.with(|pending| pending.borrow().clone());
+        let window = web_sys::window().unwrap();
+        window
+            .dispatch_event(&Event::new("pointerup").unwrap())
+            .unwrap();
+        JsFuture::from(next_browser_task()).await.unwrap();
+        let queued_after_pointer_up = PENDING_COPY_TEXT.with(|pending| pending.borrow().is_some());
+        window
+            .dispatch_event(&Event::new("touchend").unwrap())
+            .unwrap();
+
+        let writes = restore_clipboard.call0(&JsValue::UNDEFINED).unwrap();
+        let writes = writes.dyn_into::<js_sys::Array>().unwrap();
+        assert_eq!(queued_before_pointer_up.as_deref(), Some("example-seed"));
+        assert!(!queued_after_pointer_up);
+        assert_eq!(writes.length(), 2);
+        assert_eq!(writes.get(0).as_string().as_deref(), Some("example-seed"));
+        assert_eq!(writes.get(1).as_string().as_deref(), Some("example-seed"));
+    }
+}
