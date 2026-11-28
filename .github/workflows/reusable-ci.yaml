@@ -68,7 +68,7 @@ jobs:
         run: cargo fmt --all --check
 
   lint_github:
-    name: Actionlint + Shellcheck
+    name: Actionlint + ShellCheck
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
