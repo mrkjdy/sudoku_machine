@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 #[cfg(target_family = "wasm")]
-use bevy_defer::AsyncCommandsExtension;
-#[cfg(target_family = "wasm")]
 use std::cell::{Cell, RefCell};
 #[cfg(target_family = "wasm")]
 use wasm_bindgen::closure::Closure;
@@ -164,7 +162,7 @@ impl ClipboardResource {
     }
 
     #[cfg(target_family = "wasm")]
-    async fn wasm_read_text() -> String {
+    pub(crate) async fn wasm_read_text() -> String {
         let clipboard = Self::wasm_get_clipboard().expect("Failed to access wasm clipboard");
         JsFuture::from(clipboard.read_text())
             .await
@@ -193,17 +191,6 @@ impl ClipboardResource {
     pub fn native_paste(&mut self, destination: &mut String) {
         destination.push_str(&self.native_read_text());
     }
-
-    /// Pastes the text from the clipboard into the given text entity.
-    #[cfg(target_family = "wasm")]
-    pub fn wasm_paste(&mut self, commands: &mut Commands, text_entity: Entity) {
-        commands.spawn_task(move || async move {
-            let clipboard_text = Self::wasm_read_text().await;
-            bevy_defer::fetch!(text_entity, &mut Text).get_mut(|mut t| {
-                t.0.push_str(&clipboard_text);
-            })
-        });
-    }
 }
 
 pub fn clipboard_plugin(app: &mut App) {
@@ -219,7 +206,9 @@ pub fn clipboard_plugin(app: &mut App) {
 mod tests {
     use super::*;
     use crate::plugins::common::{
-        bundles::text_input::{text_input_bundle, text_input_plugin, TextInputBundleOptions},
+        bundles::text_input::{
+            text_input_bundle, text_input_plugin, TextInputBundleOptions, TextInputContainer,
+        },
         theme::focus::focus_plugin,
     };
     use bevy::{
@@ -314,6 +303,23 @@ mod tests {
         JsFuture::from(next_browser_task()).await.unwrap();
         app.update();
         let pasted_text = app.world().get::<Text>(input_text).unwrap().0.clone();
+        assert_eq!(
+            app.world().get::<TextInputContainer>(input).unwrap().value,
+            "example-seed-pasted"
+        );
+
+        press_key(&mut app, KeyCode::Backspace, Key::Backspace);
+        assert!(app.world().get::<Text>(input_text).unwrap().0.is_empty());
+        press_key(&mut app, KeyCode::Escape, Key::Escape);
+        app.world_mut().resource_mut::<InputFocus>().clear();
+        app.update();
+        assert_eq!(app.world().get::<Text>(input_text).unwrap().0, "Random");
+        assert!(app
+            .world()
+            .get::<TextInputContainer>(input)
+            .unwrap()
+            .value
+            .is_empty());
 
         let writes = restore_clipboard.call0(&JsValue::UNDEFINED).unwrap();
         let writes = writes.dyn_into::<js_sys::Array>().unwrap();

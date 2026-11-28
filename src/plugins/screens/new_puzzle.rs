@@ -6,7 +6,8 @@ use crate::{
         bundles::{
             dropdown::{self, dropdown_bundle, DropdownBundleOptions, DropdownContainer},
             text_input::{
-                text_input_bundle, text_input_plugin, TextInputBundleOptions, TextInputContainer,
+                text_input_bundle, text_input_plugin, typing_system, TextInputBundleOptions,
+                TextInputContainer,
             },
         },
         theme::{
@@ -27,7 +28,8 @@ pub fn new_puzzle_menu_plugin(app: &mut App) {
         .add_plugins((dropdown::dropdown_plugin, text_input_plugin))
         .add_systems(
             Update,
-            (description_system, start_button_system).run_if(in_state(ScreenState::NewPuzzle)),
+            (description_system, start_button_system.after(typing_system))
+                .run_if(in_state(ScreenState::NewPuzzle)),
         );
 }
 
@@ -198,8 +200,7 @@ fn description_system(
 fn start_button_system(
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<StartButton>)>,
     dropdown_query: Query<&DropdownContainer, With<PuzzleTypeDropdown>>,
-    seed_container_query: Query<(&Children, &TextInputContainer), With<SeedTextInput>>,
-    seed_text_query: Query<&Text>,
+    seed_container_query: Query<&TextInputContainer, With<SeedTextInput>>,
     mut puzzle_settings: ResMut<PuzzleSettings>,
     mut next_screen_state: ResMut<NextState<ScreenState>>,
 ) {
@@ -209,36 +210,35 @@ fn start_button_system(
     {
         // Read the puzzle settings from the dropdown and the seed input
         let dropdown_data = dropdown_query.single().unwrap();
-        let (seed_container_children, text_input_data) = seed_container_query.single().unwrap();
-        let seed_text = seed_text_query.get(seed_container_children[0]).unwrap();
+        let seed_value = &seed_container_query.single().unwrap().value;
         // Set the PuzzleSettings resource
         puzzle_settings.puzzle_type = PuzzleType::try_from(dropdown_data.selected).unwrap();
-        puzzle_settings.seed = if text_input_data.is_empty {
+        puzzle_settings.seed = if seed_value.is_empty() {
             // Generate a random seed string if one was not provided
             rand::rng().gen_seed()
         } else {
             // Otherwise use the provided value
-            seed_text.0.clone()
+            seed_value.clone()
         };
         // Change states
         next_screen_state.set(ScreenState::Game);
     }
 }
 
-#[cfg(all(test, target_family = "wasm"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::puzzles::classic::puzzle::ClassicPuzzle;
-    use wasm_bindgen_test::wasm_bindgen_test;
 
-    #[wasm_bindgen_test]
-    fn start_without_seed_generates_playable_puzzle() {
+    #[cfg_attr(not(target_family = "wasm"), test)]
+    #[cfg_attr(target_family = "wasm", wasm_bindgen_test::wasm_bindgen_test)]
+    fn start_uses_seed_value_or_generates_a_playable_puzzle() {
         let mut app = App::new();
         app.init_resource::<PuzzleSettings>()
             .init_resource::<NextState<ScreenState>>()
             .add_systems(Update, start_button_system);
         let world = app.world_mut();
-        world.spawn((StartButton, Interaction::Pressed));
+        let start = world.spawn((StartButton, Interaction::Pressed)).id();
         world.spawn((
             PuzzleTypeDropdown,
             DropdownContainer {
@@ -251,12 +251,10 @@ mod tests {
                 SeedTextInput,
                 TextInputContainer {
                     placeholder_text: "Random".into(),
-                    is_empty: true,
+                    value: String::new(),
                 },
             ))
             .id();
-        world.spawn((Text::new("Random"), ChildOf(seed_input)));
-
         app.update();
 
         let seed = &app.world().resource::<PuzzleSettings>().seed;
@@ -271,5 +269,14 @@ mod tests {
             ClassicPuzzle::count_solutions_bounded_iterative(puzzle, 2),
             1
         );
+
+        let world = app.world_mut();
+        world
+            .get_mut::<TextInputContainer>(seed_input)
+            .unwrap()
+            .value = "Random".into();
+        *world.get_mut::<Interaction>(start).unwrap() = Interaction::Pressed;
+        app.update();
+        assert_eq!(app.world().resource::<PuzzleSettings>().seed, "Random");
     }
 }
