@@ -40,16 +40,20 @@ pub const PIXELS_PER_CH: f32 = 10.5;
 mod tests {
     use super::*;
     use crate::plugins::{
+        common::{
+            bundles::{puzzle_cell::PuzzleCell, text_input::TextInputContainer},
+            theme::focus::focus_plugin,
+        },
         nav::{nav_plugin, NavButton},
         puzzles::classic::ClassicGridState,
     };
-    use bevy::state::app::StatesPlugin;
+    use bevy::{input_focus::InputFocus, state::app::StatesPlugin};
     use wasm_bindgen_test::wasm_bindgen_test;
 
     #[wasm_bindgen_test]
     fn screen_transitions_clean_up_ui_and_keep_navigation() {
         let mut app = App::new();
-        app.add_plugins((StatesPlugin, screen_plugin, nav_plugin));
+        app.add_plugins((StatesPlugin, focus_plugin, screen_plugin, nav_plugin));
         let world = app.world_mut();
         world.run_schedule(Startup);
         world.run_schedule(StateTransition);
@@ -72,6 +76,7 @@ mod tests {
             world.run_schedule(StateTransition);
 
             assert_eq!(world.resource::<State<ScreenState>>().get(), &screen);
+            assert_eq!(world.resource::<InputFocus>().get(), None);
             assert!(world.get_entity(old_root).is_err());
             assert!(world.get_entity(old_child).is_err());
             assert!(world.get::<NavButton>(nav).is_some());
@@ -85,9 +90,22 @@ mod tests {
                     screen_roots.single(world).unwrap()
                 );
                 assert!(world.contains_resource::<ClassicGridState>());
+                let cell = world
+                    .query_filtered::<Entity, With<PuzzleCell>>()
+                    .iter(world)
+                    .next()
+                    .unwrap();
+                world.resource_mut::<InputFocus>().set(cell);
             } else {
                 assert!(game_nav.iter(world).next().is_none());
                 assert!(!world.contains_resource::<ClassicGridState>());
+            }
+            if screen == ScreenState::NewPuzzle {
+                let seed = world
+                    .query_filtered::<Entity, With<TextInputContainer>>()
+                    .single(world)
+                    .unwrap();
+                world.resource_mut::<InputFocus>().set(seed);
             }
         }
         assert!(screen_roots.single(world).is_ok());

@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{input_focus::InputFocus, prelude::*};
 
 use super::{focus::FocusOutline, Theme};
 use crate::plugins::common::bundles::puzzle_cell::PuzzleCellKind;
@@ -21,11 +21,11 @@ pub fn themed_node_plugin(app: &mut App) {
         (
             theme_changed_system.run_if(resource_changed::<Theme>),
             themed_background_color_added_system,
-            themed_border_color_added_system,
             themed_border_radius_added_system,
             themed_border_rect_added_system,
         ),
-    );
+    )
+    .add_systems(PostUpdate, themed_border_color_system);
 }
 
 fn theme_changed_system(
@@ -33,10 +33,6 @@ fn theme_changed_system(
     mut background_color_query: Query<
         (&mut BackgroundColor, Option<&PuzzleCellKind>),
         With<ThemedBackgroundColor>,
-    >,
-    mut border_color_query: Query<
-        (&mut BorderColor, Option<&FocusOutline>),
-        With<ThemedBorderColor>,
     >,
     mut border_radius_query: Query<&mut BorderRadius, With<ThemedBorderRadius>>,
     mut node_query: Query<&mut Node, With<ThemedBorderRect>>,
@@ -48,13 +44,6 @@ fn theme_changed_system(
         } else {
             theme.button_normal_background
         };
-    }
-
-    for (mut border_color, focus_outline) in &mut border_color_query {
-        let default_color = focus_outline
-            .map(|outline| outline.normal)
-            .unwrap_or(theme.border_color);
-        *border_color = BorderColor::all(default_color);
     }
 
     for mut border_radius in &mut border_radius_query {
@@ -83,18 +72,28 @@ fn themed_background_color_added_system(
     }
 }
 
-fn themed_border_color_added_system(
+fn themed_border_color_system(
     theme: Res<Theme>,
-    mut border_color_query: Query<
-        (&mut BorderColor, Option<&FocusOutline>),
-        Added<ThemedBorderColor>,
-    >,
+    input_focus: Res<InputFocus>,
+    mut border_color_query: Query<(
+        Entity,
+        &mut BorderColor,
+        Option<&FocusOutline>,
+        Ref<ThemedBorderColor>,
+    )>,
 ) {
-    for (mut border_color, focus_outline) in &mut border_color_query {
-        let default_color = focus_outline
-            .map(|outline| outline.normal)
-            .unwrap_or(theme.border_color);
-        *border_color = BorderColor::all(default_color);
+    let refresh_all = theme.is_changed() || input_focus.is_changed();
+    for (entity, mut border_color, focus_outline, themed_border) in &mut border_color_query {
+        if refresh_all || themed_border.is_added() {
+            let color = if input_focus.get() == Some(entity) {
+                focus_outline
+                    .and_then(|outline| outline.focused)
+                    .unwrap_or(theme.button_pressed_background.0)
+            } else {
+                focus_outline.map_or(theme.border_color, |outline| outline.normal)
+            };
+            *border_color = BorderColor::all(color);
+        }
     }
 }
 

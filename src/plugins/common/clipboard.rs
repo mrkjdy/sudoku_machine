@@ -218,6 +218,17 @@ pub fn clipboard_plugin(app: &mut App) {
 #[cfg(all(test, target_family = "wasm"))]
 mod tests {
     use super::*;
+    use crate::plugins::common::{
+        bundles::text_input::{text_input_bundle, text_input_plugin, TextInputBundleOptions},
+        theme::focus::focus_plugin,
+    };
+    use bevy::{
+        input::{
+            keyboard::{Key, KeyboardInput},
+            ButtonState, InputPlugin,
+        },
+        input_focus::InputFocus,
+    };
     use wasm_bindgen::prelude::wasm_bindgen;
     use wasm_bindgen_test::*;
 
@@ -228,6 +239,9 @@ mod tests {
             Object.defineProperty(navigator, 'clipboard', {
                 configurable: true,
                 value: {
+                    readText() {
+                        return Promise.resolve('-pasted');
+                    },
                     writeText(text) {
                         writes.push(text);
                         return writes.length === 1
@@ -255,8 +269,33 @@ mod tests {
     #[wasm_bindgen_test]
     async fn rejected_copy_retries_on_pointer_up() {
         let restore_clipboard = reject_first_clipboard_write();
-        let mut clipboard = ClipboardResource;
-        clipboard.copy("example-seed");
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, InputPlugin, focus_plugin, text_input_plugin));
+        let world = app.world_mut();
+        let input = world
+            .spawn(text_input_bundle(TextInputBundleOptions {
+                placeholder_text: "Random".into(),
+                ..default()
+            }))
+            .id();
+        let input_text = world.get::<Children>(input).unwrap()[0];
+
+        press_key(&mut app, KeyCode::KeyX, Key::Character("x".into()));
+        assert_eq!(app.world().get::<Text>(input_text).unwrap().0, "Random");
+
+        *app.world_mut().get_mut::<Interaction>(input).unwrap() = Interaction::Pressed;
+        press_key(
+            &mut app,
+            KeyCode::KeyE,
+            Key::Character("example-seed".into()),
+        );
+        assert_eq!(app.world().resource::<InputFocus>().get(), Some(input));
+        assert_eq!(
+            app.world().get::<Text>(input_text).unwrap().0,
+            "example-seed"
+        );
+        press_key(&mut app, KeyCode::ControlLeft, Key::Control);
+        press_key(&mut app, KeyCode::KeyC, Key::Character("c".into()));
         JsFuture::from(next_browser_task()).await.unwrap();
 
         let queued_before_pointer_up = PENDING_COPY_TEXT.with(|pending| pending.borrow().clone());
@@ -270,6 +309,12 @@ mod tests {
             .dispatch_event(&Event::new("touchend").unwrap())
             .unwrap();
 
+        press_key(&mut app, KeyCode::KeyV, Key::Character("v".into()));
+        app.update();
+        JsFuture::from(next_browser_task()).await.unwrap();
+        app.update();
+        let pasted_text = app.world().get::<Text>(input_text).unwrap().0.clone();
+
         let writes = restore_clipboard.call0(&JsValue::UNDEFINED).unwrap();
         let writes = writes.dyn_into::<js_sys::Array>().unwrap();
         assert_eq!(queued_before_pointer_up.as_deref(), Some("example-seed"));
@@ -277,5 +322,18 @@ mod tests {
         assert_eq!(writes.length(), 2);
         assert_eq!(writes.get(0).as_string().as_deref(), Some("example-seed"));
         assert_eq!(writes.get(1).as_string().as_deref(), Some("example-seed"));
+        assert_eq!(pasted_text, "example-seed-pasted");
+    }
+
+    fn press_key(app: &mut App, key_code: KeyCode, logical_key: Key) {
+        app.world_mut().write_message(KeyboardInput {
+            key_code,
+            logical_key,
+            state: ButtonState::Pressed,
+            text: None,
+            repeat: false,
+            window: Entity::PLACEHOLDER,
+        });
+        app.update();
     }
 }

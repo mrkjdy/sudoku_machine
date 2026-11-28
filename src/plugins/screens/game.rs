@@ -1,18 +1,19 @@
 use std::time::Duration;
 
-use bevy::{ecs::schedule::common_conditions::resource_exists, prelude::*};
+use bevy::{
+    ecs::schedule::common_conditions::resource_exists, input_focus::InputFocus, prelude::*,
+};
 
 use crate::{
     plugins::{
         common::{
             bundles::puzzle_cell::{
-                puzzle_cell_input_system, PuzzleCell, PuzzleCellBoardSize, PuzzleCellEdited,
+                puzzle_cell_input_system, PuzzleCell, PuzzleCellBoard, PuzzleCellEdited,
                 PuzzleCellKind, PuzzleCellNeighborHighlight, PuzzleCellPosition,
                 PUZZLE_CELL_NEIGHBOR_HIGHLIGHT_COLOR,
             },
             clipboard::ClipboardResource,
             theme::{
-                focus::FocusedEntity,
                 node::{
                     ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect,
                 },
@@ -104,11 +105,13 @@ pub fn game_plugin(app: &mut App) {
                 puzzle_cell_input_system
                     .run_if(in_state(ScreenState::Game))
                     .run_if(resource_exists::<ClassicGridState>)
-                    .run_if(resource_exists::<PuzzleCellBoardSize>),
+                    .run_if(resource_exists::<PuzzleCellBoard>),
                 classic_puzzle_cell_apply_edit_system
+                    .after(puzzle_cell_input_system)
                     .run_if(in_state(ScreenState::Game))
                     .run_if(resource_exists::<ClassicGridState>),
                 classic_puzzle_neighbor_highlight_system
+                    .after(puzzle_cell_input_system)
                     .run_if(in_state(ScreenState::Game))
                     .run_if(resource_exists::<ClassicGridState>),
                 game_header_layout_system.run_if(in_state(ScreenState::Game)),
@@ -137,10 +140,7 @@ fn game_setup(
             let puzzle = ClassicPuzzle::from_seed(&puzzle_settings.seed);
             let grid = puzzle.grid;
             commands.insert_resource(ClassicGridState::new(grid));
-            commands.insert_resource(PuzzleCellBoardSize {
-                rows: NUM_ROWS,
-                cols: NUM_COLS,
-            });
+            commands.insert_resource(PuzzleCellBoard::new(NUM_ROWS, NUM_COLS));
             Some(grid)
         }
         #[cfg(debug_assertions)]
@@ -303,7 +303,7 @@ fn game_setup(
 
 fn clear_classic_grid_state(mut commands: Commands) {
     commands.remove_resource::<ClassicGridState>();
-    commands.remove_resource::<PuzzleCellBoardSize>();
+    commands.remove_resource::<PuzzleCellBoard>();
 }
 
 fn clear_game_timer(mut commands: Commands) {
@@ -441,12 +441,12 @@ fn classic_puzzle_cell_apply_edit_system(
 
 fn classic_puzzle_neighbor_highlight_system(
     theme: Res<Theme>,
-    focused_entity: Res<FocusedEntity>,
+    input_focus: Res<InputFocus>,
     mut commands: Commands,
     position_query: Query<&PuzzleCellPosition, With<PuzzleCell>>,
     mut cell_query: PuzzleCellHighlightQuery,
 ) {
-    let Some(current) = focused_entity.current else {
+    let Some(current) = input_focus.get() else {
         for (entity, _, mut background, highlight, kind, _) in &mut cell_query {
             if highlight.is_some() {
                 *background = BackgroundColor(base_color_for_kind(&theme, kind));
@@ -515,7 +515,10 @@ fn base_color_for_kind(theme: &Theme, kind: Option<&PuzzleCellKind>) -> Color {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::plugins::nav::nav_plugin;
+    use crate::plugins::{
+        common::theme::{focus::focus_plugin, node::themed_node_plugin},
+        nav::nav_plugin,
+    };
     use bevy::{
         input::{
             keyboard::{Key, KeyboardInput},
@@ -531,25 +534,66 @@ mod tests {
         app.add_plugins(StatesPlugin)
             .insert_state(ScreenState::Game)
             .init_resource::<PuzzleSettings>()
-            .init_resource::<FocusedEntity>()
             .init_resource::<Theme>()
             .init_resource::<Time>()
+            .init_resource::<ButtonInput<MouseButton>>()
             .add_message::<KeyboardInput>()
-            .add_plugins((nav_plugin, game_plugin));
+            .add_plugins((focus_plugin, themed_node_plugin, nav_plugin, game_plugin));
         app.update();
 
         let world = app.world_mut();
-        let cell = world
-            .query_filtered::<Entity, With<PuzzleCell>>()
+        let (cell, position) = world
+            .query::<(Entity, &PuzzleCellPosition, &PuzzleCellKind)>()
             .iter(world)
-            .next()
+            .find(|(_, position, kind)| {
+                **kind == PuzzleCellKind::Editable && position.col + 1 < NUM_COLS
+            })
+            .map(|(cell, position, _)| (cell, *position))
             .unwrap();
-        world.resource_mut::<FocusedEntity>().current = Some(cell);
+        *world.get_mut::<Interaction>(cell).unwrap() = Interaction::Pressed;
+        press_key(&mut app, KeyCode::Digit4, Key::Character("4".into()), false);
+
+        let world = app.world_mut();
+        assert_eq!(world.resource::<InputFocus>().get(), Some(cell));
+        assert_ne!(
+            world.get::<BorderColor>(cell),
+            Some(&BorderColor::all(Color::NONE))
+        );
+        assert_eq!(
+            world
+                .resource::<ClassicGridState>()
+                .get(position.row, position.col),
+            Some(4)
+        );
+
+        *world.get_mut::<Interaction>(cell).unwrap() = Interaction::None;
+        world
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        app.update();
+        let world = app.world_mut();
+        assert_eq!(world.resource::<InputFocus>().get(), None);
+        assert_eq!(
+            world.get::<BorderColor>(cell),
+            Some(&BorderColor::all(Color::NONE))
+        );
+        world.resource_mut::<ButtonInput<MouseButton>>().reset_all();
+
+        press_key(&mut app, KeyCode::ArrowRight, Key::ArrowRight, false);
+        let world = app.world();
+        let focused_cell = world.resource::<InputFocus>().get().unwrap();
+        let focused_position = world.get::<PuzzleCellPosition>(focused_cell).unwrap();
+        assert_eq!(focused_position.row, position.row);
+        assert_eq!(focused_position.col, position.col + 1);
 
         for repeat in [false, true] {
-            press_escape(&mut app, repeat);
+            press_key(&mut app, KeyCode::Escape, Key::Escape, repeat);
             let world = app.world();
-            assert_eq!(world.resource::<FocusedEntity>().current, None);
+            assert_eq!(world.resource::<InputFocus>().get(), None);
+            assert_eq!(
+                world.get::<BorderColor>(focused_cell),
+                Some(&BorderColor::all(Color::NONE))
+            );
             assert!(matches!(
                 world.resource::<NextState<ScreenState>>(),
                 NextState::Unchanged
@@ -560,7 +604,7 @@ mod tests {
             );
         }
 
-        press_escape(&mut app, false);
+        press_key(&mut app, KeyCode::Escape, Key::Escape, false);
         app.update();
         assert_eq!(
             app.world().resource::<State<ScreenState>>().get(),
@@ -568,10 +612,10 @@ mod tests {
         );
     }
 
-    fn press_escape(app: &mut App, repeat: bool) {
+    fn press_key(app: &mut App, key_code: KeyCode, logical_key: Key, repeat: bool) {
         app.world_mut().write_message(KeyboardInput {
-            key_code: KeyCode::Escape,
-            logical_key: Key::Escape,
+            key_code,
+            logical_key,
             state: ButtonState::Pressed,
             text: None,
             repeat,
