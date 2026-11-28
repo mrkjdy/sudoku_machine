@@ -1,0 +1,21 @@
+name: Post-submit
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Checks
+    uses: ./.github/workflows/reusable-ci.yaml
+
+  builds:
+    name: Platform builds
+    uses: ./.github/workflows/build.yaml
+
+  benchmarks:
+    name: Benchmarks
+    uses: ./.github/workflows/bench.yaml

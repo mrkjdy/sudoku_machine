@@ -1,0 +1,64 @@
+name: Build
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, labeled]
+  workflow_call:
+    outputs:
+      package_name:
+        description: Cargo package name from the source ref shared by all targets
+        value: ${{ jobs.build.outputs.package_name }}
+    inputs:
+      mode:
+        description: Compile binaries or create release packages
+        type: string
+        default: build
+      ref:
+        description: Source ref to build
+        type: string
+      sign:
+        description: Sign macOS release packages
+        type: boolean
+        default: false
+    secrets:
+      MACOS_BUILD_CERTIFICATE_BASE64:
+        required: false
+      MACOS_P12_PASSWORD:
+        required: false
+      MACOS_KEYCHAIN_PASSWORD:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    if: >-
+      inputs.mode == 'package' ||
+      github.event_name != 'pull_request' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'requires:build') ||
+      (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'requires:build'))
+    concurrency:
+      group: platform-${{ inputs.mode || 'build' }}-${{ github.event.pull_request.number || github.run_id }}-${{ matrix.target }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - wasm32-unknown-unknown
+          - x86_64-unknown-linux-gnu
+          - x86_64-pc-windows-msvc
+          - aarch64-apple-darwin
+          - x86_64-apple-darwin
+    uses: ./.github/workflows/reusable-build.yaml
+    with:
+      target: ${{ matrix.target }}
+      mode: ${{ inputs.mode || 'build' }}
+      ref: ${{ inputs.ref || '' }}
+      sign: ${{ inputs.sign && github.event_name != 'pull_request' && endsWith(matrix.target, '-apple-darwin') || false }}
+    secrets:
+      MACOS_BUILD_CERTIFICATE_BASE64: ${{ inputs.sign && github.event_name != 'pull_request' && endsWith(matrix.target, '-apple-darwin') && secrets.MACOS_BUILD_CERTIFICATE_BASE64 || '' }}
+      MACOS_P12_PASSWORD: ${{ inputs.sign && github.event_name != 'pull_request' && endsWith(matrix.target, '-apple-darwin') && secrets.MACOS_P12_PASSWORD || '' }}
+      MACOS_KEYCHAIN_PASSWORD: ${{ inputs.sign && github.event_name != 'pull_request' && endsWith(matrix.target, '-apple-darwin') && secrets.MACOS_KEYCHAIN_PASSWORD || '' }}
