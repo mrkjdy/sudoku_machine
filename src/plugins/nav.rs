@@ -1,6 +1,7 @@
 use bevy::{
     app::AppExit,
     input::{keyboard::Key, keyboard::KeyboardInput, ButtonState},
+    input_focus::InputFocus,
     prelude::*,
 };
 use strum_macros::Display;
@@ -10,7 +11,6 @@ use crate::plugins::screens::ScreenState;
 use super::common::{
     bundles::puzzle_cell::{puzzle_cell_input_system, PuzzleCellFocusCleared},
     theme::{
-        focus::FocusedEntity,
         node::{ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect},
         text::{ThemedFontWeight, ThemedTextColor},
     },
@@ -130,7 +130,7 @@ fn nav_visibility_system(
 
 fn nav_escape_system(
     mut keyboard_input_events: MessageReader<KeyboardInput>,
-    focused: Option<Res<FocusedEntity>>,
+    input_focus: Option<Res<InputFocus>>,
     mut focus_cleared_events: MessageReader<PuzzleCellFocusCleared>,
     current_screen: Option<Res<State<ScreenState>>>,
     mut next_screen: Option<ResMut<NextState<ScreenState>>>,
@@ -150,7 +150,7 @@ fn nav_escape_system(
         return;
     }
 
-    if focused.as_ref().and_then(|f| f.current).is_some() {
+    if input_focus.as_deref().and_then(InputFocus::get).is_some() {
         return;
     }
 

@@ -1,11 +1,11 @@
 use bevy::input::keyboard::Key;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::input::ButtonState;
+use bevy::input_focus::InputFocus;
 use bevy::prelude::*;
 
 use crate::plugins::common::clipboard::clipboard_plugin;
 use crate::plugins::common::clipboard::ClipboardResource;
-use crate::plugins::common::theme::focus::FocusedEntity;
 use crate::plugins::common::theme::node::ThemedBackgroundColor;
 use crate::plugins::common::theme::node::ThemedBorderColor;
 use crate::plugins::common::theme::node::ThemedBorderRadius;
@@ -19,9 +19,9 @@ pub fn text_input_plugin(app: &mut App) {
         .add_systems(
             Update,
             (
-                text_input_focus_system,
+                text_input_focus_system.run_if(resource_changed::<InputFocus>),
                 text_input_cursor_blink_system,
-                typing_system,
+                typing_system.after(text_input_focus_system),
             ),
         );
 }
@@ -107,41 +107,26 @@ pub fn text_input_bundle(options: TextInputBundleOptions) -> impl Bundle {
 }
 
 fn text_input_focus_system(
-    focused_entity: Res<FocusedEntity>,
-    container_query: Query<(&TextInputContainer, &Children), With<TextInputContainer>>,
+    input_focus: Res<InputFocus>,
+    container_query: Query<(Entity, &TextInputContainer, &Children)>,
     mut text_query: Query<&mut Text, With<TextInputText>>,
     mut text_cursor_query: Query<&mut Visibility, With<TextInputCursor>>,
 ) {
-    // Unfocus the last focused entity if it is a text input
-    if let Some(last_focused_entity) = focused_entity.last {
-        let last_container_children_result = container_query.get(last_focused_entity);
-        if let Ok((text_input_data, container_children)) = last_container_children_result {
-            // Show the placeholder if the text input is empty
-            if text_input_data.is_empty {
-                let mut text = text_query.get_mut(container_children[0]).unwrap();
+    for (entity, text_input_data, container_children) in &container_query {
+        let is_focused = input_focus.get() == Some(entity);
+        if text_input_data.is_empty {
+            let mut text = text_query.get_mut(container_children[0]).unwrap();
+            if is_focused {
+                text.0.clear();
+            } else {
                 text.0.clone_from(&text_input_data.placeholder_text);
             }
-            // Hide the cursor
-            let mut text_cursor_visibility =
-                text_cursor_query.get_mut(container_children[1]).unwrap();
-            *text_cursor_visibility = Visibility::Hidden;
         }
-    }
-
-    // Focus the current focused entity if it is a text input
-    if let Some(current_focused_entity) = focused_entity.current {
-        let current_container_children_result = container_query.get(current_focused_entity);
-        if let Ok((text_input_data, container_children)) = current_container_children_result {
-            // Hide the placeholder if the text input is empty
-            if text_input_data.is_empty {
-                let mut text = text_query.get_mut(container_children[0]).unwrap();
-                text.0 = String::new();
-            }
-            // Show the cursor
-            let mut text_cursor_visibility =
-                text_cursor_query.get_mut(container_children[1]).unwrap();
-            *text_cursor_visibility = Visibility::Visible;
-        }
+        *text_cursor_query.get_mut(container_children[1]).unwrap() = if is_focused {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
     }
 }
 
@@ -165,25 +150,21 @@ fn text_input_cursor_blink_system(
 
 fn typing_system(
     #[cfg(target_family = "wasm")] mut commands: Commands,
-    focused_entity: Res<FocusedEntity>,
+    input_focus: Res<InputFocus>,
     mut container_query: Query<(&mut TextInputContainer, &Children), With<TextInputContainer>>,
     mut text_query: Query<&mut Text, With<TextInputText>>,
     mut keyboard_input_events: MessageReader<KeyboardInput>,
     mut clipboard_resource: ResMut<ClipboardResource>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
-    // Get the current focused entity
-    if focused_entity.current.is_none() {
+    let Some(entity) = input_focus.get() else {
+        keyboard_input_events.clear();
         return;
-    }
-    let current_focused_entity = focused_entity.current.unwrap();
-
-    // Check if it's a text input container
-    let container_result = container_query.get_mut(current_focused_entity);
-    if container_result.is_err() {
+    };
+    let Ok((mut text_input_data, container_children)) = container_query.get_mut(entity) else {
+        keyboard_input_events.clear();
         return;
-    }
-    let (mut text_input_data, container_children) = container_result.unwrap();
+    };
 
     // Get the text input val
     let text_entity = container_children[0];

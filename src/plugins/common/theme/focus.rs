@@ -1,6 +1,4 @@
-use bevy::prelude::*;
-
-use super::{node::ThemedBorderColor, Theme};
+use bevy::{input_focus::InputFocus, prelude::*, ui::UiSystems};
 
 #[derive(Component, Clone, Copy)]
 pub struct FocusOutline {
@@ -29,67 +27,32 @@ impl Default for FocusOutline {
     }
 }
 
-#[derive(Resource, Default)]
-pub struct FocusedEntity {
-    pub last: Option<Entity>,
-    pub current: Option<Entity>,
-}
-
 pub fn focus_plugin(app: &mut App) {
-    app.init_resource::<FocusedEntity>().add_systems(
-        Update,
-        (
-            focus_system,
-            unfocus_system,
-            focus_outline_system.run_if(resource_exists_and_changed::<FocusedEntity>),
-        ),
-    );
+    app.init_resource::<InputFocus>()
+        .add_observer(clear_despawned_focus)
+        .add_systems(PreUpdate, pointer_focus_system.after(UiSystems::Focus));
 }
 
-fn focus_system(
-    interaction_query: Query<(&Interaction, Entity), Changed<Interaction>>,
-    mut focused_entity: ResMut<FocusedEntity>,
-) {
-    for (&interaction, interacted_entity) in interaction_query.iter() {
-        if interaction == Interaction::Pressed {
-            focused_entity.last = focused_entity.current;
-            focused_entity.current = Some(interacted_entity);
-        }
-    }
-}
-
-fn unfocus_system(
+fn pointer_focus_system(
     buttons: Res<ButtonInput<MouseButton>>,
-    interaction_query: Query<&Interaction, Changed<Interaction>>,
-    mut focused_entity: ResMut<FocusedEntity>,
+    interaction_query: Query<(&Interaction, Entity), Changed<Interaction>>,
+    mut input_focus: ResMut<InputFocus>,
 ) {
-    if buttons.get_just_pressed().len() > 0
-        && interaction_query.iter().all(|&i| i != Interaction::Pressed)
-    {
-        focused_entity.last = focused_entity.current;
-        focused_entity.current = None;
+    let pressed = interaction_query
+        .iter()
+        .filter(|(interaction, _)| **interaction == Interaction::Pressed)
+        .last();
+    if let Some((_, entity)) = pressed {
+        if input_focus.get() != Some(entity) {
+            input_focus.set(entity);
+        }
+    } else if buttons.get_just_pressed().len() > 0 && input_focus.get().is_some() {
+        input_focus.clear();
     }
 }
 
-fn focus_outline_system(
-    theme: Res<Theme>,
-    focused_entity: Res<FocusedEntity>,
-    mut border_query: Query<(&mut BorderColor, Option<&FocusOutline>), With<ThemedBorderColor>>,
-) {
-    if let Some(last) = focused_entity.last {
-        if let Ok((mut last_border, focus_outline)) = border_query.get_mut(last) {
-            let default_color = focus_outline
-                .map(|outline| outline.normal)
-                .unwrap_or(theme.border_color);
-            *last_border = BorderColor::all(default_color);
-        }
-    }
-    if let Some(current) = focused_entity.current {
-        if let Ok((mut current_border, focus_outline)) = border_query.get_mut(current) {
-            let focused_color = focus_outline
-                .and_then(|outline| outline.focused)
-                .unwrap_or(theme.button_pressed_background.0);
-            *current_border = BorderColor::all(focused_color);
-        }
+fn clear_despawned_focus(event: On<Despawn, Interaction>, mut input_focus: ResMut<InputFocus>) {
+    if input_focus.get() == Some(event.entity) {
+        input_focus.clear();
     }
 }

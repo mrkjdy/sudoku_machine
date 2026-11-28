@@ -1,10 +1,11 @@
 use bevy::{
     input::{keyboard::Key, keyboard::KeyboardInput, ButtonState},
+    input_focus::InputFocus,
     prelude::*,
 };
 
 use crate::plugins::common::theme::{
-    focus::{FocusOutline, FocusedEntity},
+    focus::FocusOutline,
     node::{ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect},
     text::{ThemedFontWeight, ThemedTextColor},
 };
@@ -56,10 +57,21 @@ pub struct PuzzleCellPosition {
     pub col: usize,
 }
 
-#[derive(Resource, Clone, Copy)]
-pub struct PuzzleCellBoardSize {
-    pub rows: usize,
-    pub cols: usize,
+#[derive(Resource)]
+pub struct PuzzleCellBoard {
+    rows: usize,
+    cols: usize,
+    last_focused_cell: Option<Entity>,
+}
+
+impl PuzzleCellBoard {
+    pub fn new(rows: usize, cols: usize) -> Self {
+        Self {
+            rows,
+            cols,
+            last_focused_cell: None,
+        }
+    }
 }
 
 #[derive(Message)]
@@ -157,21 +169,26 @@ fn key_to_cell_edit(key: &Key) -> Option<PuzzleCellEdit> {
 }
 
 pub fn puzzle_cell_input_system(
-    mut focused_entity: ResMut<FocusedEntity>,
+    mut input_focus: ResMut<InputFocus>,
     mut keyboard_input_events: MessageReader<KeyboardInput>,
     cell_query: Query<(Entity, &PuzzleCellPosition, &PuzzleCellKind, &Children)>,
     mut value_query: Query<&mut Text, With<PuzzleCellValue>>,
-    board_size: Res<PuzzleCellBoardSize>,
+    mut board: ResMut<PuzzleCellBoard>,
     mut edit_events: MessageWriter<PuzzleCellEdited>,
     mut focus_clear_events: MessageWriter<PuzzleCellFocusCleared>,
 ) {
-    let Some(target_entity) = focused_entity.current.or(focused_entity.last) else {
+    let current_focus = input_focus.get();
+    let Some(target_entity) = current_focus.or(board.last_focused_cell) else {
+        keyboard_input_events.clear();
         return;
     };
 
     let Ok((_, position_ref, kind_ref, children_ref)) = cell_query.get(target_entity) else {
+        board.last_focused_cell = None;
+        keyboard_input_events.clear();
         return;
     };
+    board.last_focused_cell = Some(target_entity);
     let position = *position_ref;
     let kind = *kind_ref;
     let children: Vec<Entity> = children_ref.iter().collect::<Vec<Entity>>();
@@ -179,7 +196,7 @@ pub fn puzzle_cell_input_system(
     let mut pending_edit: Option<PuzzleCellEdit> = None;
     let mut pending_move: Option<(isize, isize)> = None;
     let mut clear_focus = false;
-    let has_current_focus = focused_entity.current.is_some();
+    let has_current_focus = current_focus.is_some();
 
     for keyboard_input_event in keyboard_input_events.read() {
         if keyboard_input_event.state != ButtonState::Pressed {
@@ -207,22 +224,21 @@ pub fn puzzle_cell_input_system(
 
     if clear_focus {
         focus_clear_events.write_default();
-        focused_entity.last = focused_entity.current;
-        focused_entity.current = None;
+        input_focus.clear();
         return;
     }
 
     if let Some((row_delta, col_delta)) = pending_move {
         let new_row = position.row as isize + row_delta;
         let new_col = position.col as isize + col_delta;
-        if (0..board_size.rows as isize).contains(&new_row)
-            && (0..board_size.cols as isize).contains(&new_col)
+        if (0..board.rows as isize).contains(&new_row)
+            && (0..board.cols as isize).contains(&new_col)
         {
             if let Some(new_focus) =
                 find_cell_entity(&cell_query, new_row as usize, new_col as usize)
             {
-                focused_entity.last = focused_entity.current.or(Some(target_entity));
-                focused_entity.current = Some(new_focus);
+                input_focus.set(new_focus);
+                board.last_focused_cell = Some(new_focus);
             }
         }
         return;
@@ -264,8 +280,8 @@ pub fn puzzle_cell_input_system(
         }
     }
 
-    if focused_entity.current.is_none() {
-        focused_entity.current = Some(target_entity);
+    if !has_current_focus {
+        input_focus.set(target_entity);
     }
 }
 
