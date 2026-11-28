@@ -7,26 +7,22 @@ use strum_macros::Display;
 
 use crate::plugins::screens::ScreenState;
 
-use super::common::theme::{
-    node::{ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect},
-    text::{ThemedFontWeight, ThemedTextColor},
+use super::common::{
+    bundles::puzzle_cell::{puzzle_cell_input_system, PuzzleCellFocusCleared},
+    theme::{
+        focus::FocusedEntity,
+        node::{ThemedBackgroundColor, ThemedBorderColor, ThemedBorderRadius, ThemedBorderRect},
+        text::{ThemedFontWeight, ThemedTextColor},
+    },
 };
-
-use crate::plugins::common::theme::focus::FocusedEntity;
-
-#[derive(Resource, Default)]
-pub struct EscapeNavState {
-    pub focus_cleared_this_frame: bool,
-}
 
 pub fn nav_plugin(app: &mut App) {
     app.init_state::<NavState>()
-        .init_resource::<EscapeNavState>()
+        .add_message::<PuzzleCellFocusCleared>()
         .add_systems(Startup, nav_setup)
         .add_systems(Update, nav_visibility_system)
         .add_systems(Update, nav_button_action)
-        .add_systems(Update, nav_escape_system)
-        .add_systems(PostUpdate, reset_escape_nav_state);
+        .add_systems(Update, nav_escape_system.after(puzzle_cell_input_system));
 }
 
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq, States, Display)]
@@ -135,16 +131,22 @@ fn nav_visibility_system(
 fn nav_escape_system(
     mut keyboard_input_events: MessageReader<KeyboardInput>,
     focused: Option<Res<FocusedEntity>>,
-    escape_state: Res<EscapeNavState>,
+    mut focus_cleared_events: MessageReader<PuzzleCellFocusCleared>,
     current_screen: Option<Res<State<ScreenState>>>,
     mut next_screen: Option<ResMut<NextState<ScreenState>>>,
     mut commands: Commands,
 ) {
-    let escape_pressed = keyboard_input_events.read().any(|event| {
-        event.state == ButtonState::Pressed && matches!(event.logical_key, Key::Escape)
-    });
+    let focus_cleared = !focus_cleared_events.is_empty();
+    focus_cleared_events.clear();
 
-    if !escape_pressed || escape_state.focus_cleared_this_frame {
+    let mut escape_pressed = false;
+    for event in keyboard_input_events.read() {
+        escape_pressed |= event.state == ButtonState::Pressed
+            && !event.repeat
+            && matches!(event.logical_key, Key::Escape);
+    }
+
+    if !escape_pressed || focus_cleared {
         return;
     }
 
@@ -164,8 +166,4 @@ fn nav_escape_system(
             }
         }
     }
-}
-
-fn reset_escape_nav_state(mut escape_state: ResMut<EscapeNavState>) {
-    escape_state.focus_cleared_this_frame = false;
 }

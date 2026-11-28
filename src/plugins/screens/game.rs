@@ -7,8 +7,8 @@ use crate::{
         common::{
             bundles::puzzle_cell::{
                 puzzle_cell_input_system, PuzzleCell, PuzzleCellBoardSize, PuzzleCellEdited,
-                PuzzleCellFocusCleared, PuzzleCellKind, PuzzleCellNeighborHighlight,
-                PuzzleCellPosition, PUZZLE_CELL_NEIGHBOR_HIGHLIGHT_COLOR,
+                PuzzleCellKind, PuzzleCellNeighborHighlight, PuzzleCellPosition,
+                PUZZLE_CELL_NEIGHBOR_HIGHLIGHT_COLOR,
             },
             clipboard::ClipboardResource,
             theme::{
@@ -20,7 +20,7 @@ use crate::{
                 Theme,
             },
         },
-        nav::{nav_button_bundle, EscapeNavState, NavState},
+        nav::{nav_button_bundle, NavState},
         puzzles::classic::{classic_puzzle_bundle, ClassicGridState},
     },
     puzzles::{
@@ -93,7 +93,6 @@ const CHECK_ICON: &str = "✔";
 
 pub fn game_plugin(app: &mut App) {
     app.add_message::<PuzzleCellEdited>()
-        .add_message::<PuzzleCellFocusCleared>()
         .add_systems(OnEnter(ScreenState::Game), game_setup)
         .add_systems(
             OnExit(ScreenState::Game),
@@ -109,7 +108,6 @@ pub fn game_plugin(app: &mut App) {
                 classic_puzzle_cell_apply_edit_system
                     .run_if(in_state(ScreenState::Game))
                     .run_if(resource_exists::<ClassicGridState>),
-                classic_puzzle_focus_clear_system.run_if(in_state(ScreenState::Game)),
                 classic_puzzle_neighbor_highlight_system
                     .run_if(in_state(ScreenState::Game))
                     .run_if(resource_exists::<ClassicGridState>),
@@ -441,17 +439,6 @@ fn classic_puzzle_cell_apply_edit_system(
     }
 }
 
-fn classic_puzzle_focus_clear_system(
-    mut events: MessageReader<PuzzleCellFocusCleared>,
-    mut escape_nav_state: ResMut<EscapeNavState>,
-) {
-    if events.is_empty() {
-        return;
-    }
-    escape_nav_state.focus_cleared_this_frame = true;
-    events.clear();
-}
-
 fn classic_puzzle_neighbor_highlight_system(
     theme: Res<Theme>,
     focused_entity: Res<FocusedEntity>,
@@ -522,5 +509,74 @@ fn base_color_for_kind(theme: &Theme, kind: Option<&PuzzleCellKind>) -> Color {
         theme.puzzle_given_background_color()
     } else {
         theme.button_normal_background_color()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::plugins::nav::nav_plugin;
+    use bevy::{
+        input::{
+            keyboard::{Key, KeyboardInput},
+            ButtonState,
+        },
+        state::app::StatesPlugin,
+    };
+
+    #[cfg_attr(not(target_family = "wasm"), test)]
+    #[cfg_attr(target_family = "wasm", wasm_bindgen_test::wasm_bindgen_test)]
+    fn escape_clears_cell_focus_before_returning_home() {
+        let mut app = App::new();
+        app.add_plugins(StatesPlugin)
+            .insert_state(ScreenState::Game)
+            .init_resource::<PuzzleSettings>()
+            .init_resource::<FocusedEntity>()
+            .init_resource::<Theme>()
+            .init_resource::<Time>()
+            .add_message::<KeyboardInput>()
+            .add_plugins((nav_plugin, game_plugin));
+        app.update();
+
+        let world = app.world_mut();
+        let cell = world
+            .query_filtered::<Entity, With<PuzzleCell>>()
+            .iter(world)
+            .next()
+            .unwrap();
+        world.resource_mut::<FocusedEntity>().current = Some(cell);
+
+        for repeat in [false, true] {
+            press_escape(&mut app, repeat);
+            let world = app.world();
+            assert_eq!(world.resource::<FocusedEntity>().current, None);
+            assert!(matches!(
+                world.resource::<NextState<ScreenState>>(),
+                NextState::Unchanged
+            ));
+            assert_eq!(
+                world.resource::<State<ScreenState>>().get(),
+                &ScreenState::Game
+            );
+        }
+
+        press_escape(&mut app, false);
+        app.update();
+        assert_eq!(
+            app.world().resource::<State<ScreenState>>().get(),
+            &ScreenState::Home
+        );
+    }
+
+    fn press_escape(app: &mut App, repeat: bool) {
+        app.world_mut().write_message(KeyboardInput {
+            key_code: KeyCode::Escape,
+            logical_key: Key::Escape,
+            state: ButtonState::Pressed,
+            text: None,
+            repeat,
+            window: Entity::PLACEHOLDER,
+        });
+        app.update();
     }
 }

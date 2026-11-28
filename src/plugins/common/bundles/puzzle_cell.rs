@@ -187,7 +187,7 @@ pub fn puzzle_cell_input_system(
         }
         match &keyboard_input_event.logical_key {
             Key::Escape => {
-                if has_current_focus {
+                if has_current_focus && !keyboard_input_event.repeat {
                     clear_focus = true;
                 }
             }
