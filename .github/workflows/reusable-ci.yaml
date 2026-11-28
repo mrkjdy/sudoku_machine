@@ -40,12 +40,13 @@ jobs:
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         run: cargo test
 
-  lint_github:
-    name: Actionlint + ShellCheck
+  github:
+    name: GitHub
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Checkout sources
+        id: checkout
         uses: actions/checkout@v7
         with:
           persist-credentials: false
@@ -65,5 +66,6 @@ jobs:
       - name: Check GitHub Actions workflows
         run: actionlint -shellcheck shellcheck
       - name: Check .github shell scripts
+        if: ${{ !cancelled() && steps.checkout.outcome == 'success' }}
         shell: bash
         run: git ls-files -z -- ':(glob).github/**/*.sh' | xargs -0 -r shellcheck
