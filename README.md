@@ -19,6 +19,9 @@ See [.cargo/config.toml](.cargo/config.toml) for a list of useful aliases!
 
 ### Running Sudoku Machine
 
+On Debian or Ubuntu, install `libasound2-dev`, `libudev-dev`, and
+`libwayland-dev` before building the native app.
+
 There are several ways to run the game locally:
 
 | Command                                                | Description                                                                                                                                                 |
@@ -28,6 +31,10 @@ There are several ways to run the game locally:
 | `cargo rund`                                           | Run the game with Bevy's dynamic linking enabled. See the [docs](https://bevy.org/learn/quick-start/getting-started/setup/#dynamic-linking).                |
 | `cargo runw`[<sup>\*</sup>](#note-about-running-wasm)  | Run the game for the wasm32-unknown-unknown target. Uses WebGL2.                                                                                            |
 | `cargo runww`[<sup>\*</sup>](#note-about-running-wasm) | Run the game for the wasm32-unknown-unknown target with Bevy's WebGPU feature enabled. See the [docs](https://docs.rs/bevy/latest/bevy/#optional-features). |
+
+If `cargo rund` cannot resolve `bevy_dylib` after a Bevy upgrade, run
+`cargo info bevy_dylib@<locked Bevy version>` to refresh Cargo's registry
+entry, then retry. Use the `bevy` version in [Cargo.lock](Cargo.lock).
 
 #### Note about running Wasm
 

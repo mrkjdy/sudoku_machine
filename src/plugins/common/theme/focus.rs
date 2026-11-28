@@ -80,8 +80,8 @@ fn focus_outline_system(
         if let Ok((mut last_border, focus_outline)) = border_query.get_mut(last) {
             let default_color = focus_outline
                 .map(|outline| outline.normal)
-                .unwrap_or(theme.border_color.0);
-            *last_border = BorderColor(default_color);
+                .unwrap_or(theme.border_color);
+            *last_border = BorderColor::all(default_color);
         }
     }
     if let Some(current) = focused_entity.current {
@@ -89,7 +89,7 @@ fn focus_outline_system(
             let focused_color = focus_outline
                 .and_then(|outline| outline.focused)
                 .unwrap_or(theme.button_pressed_background.0);
-            *current_border = BorderColor(focused_color);
+            *current_border = BorderColor::all(focused_color);
         }
     }
 }

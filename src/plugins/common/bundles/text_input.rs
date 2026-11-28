@@ -168,7 +168,7 @@ fn typing_system(
     focused_entity: Res<FocusedEntity>,
     mut container_query: Query<(&mut TextInputContainer, &Children), With<TextInputContainer>>,
     mut text_query: Query<&mut Text, With<TextInputText>>,
-    mut keyboard_input_events: EventReader<KeyboardInput>,
+    mut keyboard_input_events: MessageReader<KeyboardInput>,
     mut clipboard_resource: ResMut<ClipboardResource>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {

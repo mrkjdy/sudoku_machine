@@ -1,0 +1,23 @@
+name: Install Linux dependencies
+description: Install the system packages needed to build Sudoku Machine on Ubuntu.
+inputs:
+  platform-build:
+    description: Include the extra system packages used for Linux platform builds
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Install system packages
+      shell: bash
+      env:
+        PLATFORM_BUILD: ${{ inputs.platform-build }}
+      run: |
+        packages=(libasound2-dev libudev-dev libwayland-dev)
+        if [[ "$PLATFORM_BUILD" == 'true' ]]; then
+          packages+=(pkg-config libx11-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev)
+        else
+          packages=(--no-install-recommends "${packages[@]}")
+        fi
+        sudo apt-get update
+        sudo apt-get install "${packages[@]}"

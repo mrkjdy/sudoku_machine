@@ -9,7 +9,7 @@ repository = "https://github.com/mrkjdy/sudoku_machine"
 
 [dependencies]
 arrayvec = "0.7.6"
-bevy = "0.16"
+bevy = "0.17"
 dark-light = "2.0"
 fastrand = "2.1.1"
 indoc = "2.0.7"
@@ -33,7 +33,7 @@ getrandom = { version = "0.4", features = ["wasm_js"] }
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["Clipboard", "Navigator", "Window", "console"] }
 wasm-bindgen-futures = "0.4"
-bevy_defer = "0.14.0"
+bevy_defer = "0.15.1"
 
 [target.'cfg(target_family = "wasm")'.dev-dependencies]
 js-sys = "0.3"

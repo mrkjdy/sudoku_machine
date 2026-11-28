@@ -53,8 +53,8 @@ fn theme_changed_system(
     for (mut border_color, focus_outline) in &mut border_color_query {
         let default_color = focus_outline
             .map(|outline| outline.normal)
-            .unwrap_or(theme.border_color.0);
-        *border_color = BorderColor(default_color);
+            .unwrap_or(theme.border_color);
+        *border_color = BorderColor::all(default_color);
     }
 
     for mut border_radius in &mut border_radius_query {
@@ -93,8 +93,8 @@ fn themed_border_color_added_system(
     for (mut border_color, focus_outline) in &mut border_color_query {
         let default_color = focus_outline
             .map(|outline| outline.normal)
-            .unwrap_or(theme.border_color.0);
-        *border_color = BorderColor(default_color);
+            .unwrap_or(theme.border_color);
+        *border_color = BorderColor::all(default_color);
     }
 }
 

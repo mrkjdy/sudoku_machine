@@ -30,11 +30,9 @@ jobs:
         with:
           shared-key: rust-ci
           cache-bin: true
-      - name: Install dependencies
+      - name: Install Linux dependencies
         id: dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
+        uses: ./.github/actions/install-linux-dependencies
       - name: Run cargo fmt
         run: cargo fmt --all --check
       - name: Run cargo clippy
