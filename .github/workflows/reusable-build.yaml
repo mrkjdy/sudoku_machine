@@ -101,11 +101,9 @@ jobs:
 
       - name: Install Linux dependencies
         if: env.artifact_name == 'linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install \
-            pkg-config libx11-dev libasound2-dev libudev-dev libxcb-render0-dev libxcb-shape0-dev \
-            libxcb-xfixes0-dev
+        uses: ./.github/actions/install-linux-dependencies
+        with:
+          platform-build: 'true'
 
       - name: Build
         shell: bash

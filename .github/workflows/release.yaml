@@ -33,10 +33,8 @@ jobs:
         uses: ./.github/actions/install-rust-toolchain
         with:
           profile: minimal
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
+      - name: Install Linux dependencies
+        uses: ./.github/actions/install-linux-dependencies
       - name: Run release-plz
         id: release
         uses: release-plz/action@v0.5

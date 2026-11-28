@@ -21,7 +21,7 @@ pub struct Theme {
     text_font_symbols: Handle<Font>,
     text_color: Color,
     border_rect: UiRect,
-    border_color: BorderColor,
+    border_color: Color,
     border_radius: BorderRadius,
     button_normal_background: BackgroundColor, // (not hovered or pressed)
     button_hovered_background: BackgroundColor,
@@ -42,7 +42,7 @@ impl Theme {
             text_font_symbols,
             text_color: Color::srgb(1.0, 1.0, 1.0),
             border_rect: UiRect::all(Val::Px(2.0)),
-            border_color: BorderColor(Color::srgb_u8(48, 54, 61)), // #30363D
+            border_color: Color::srgb_u8(48, 54, 61), // #30363D
             border_radius: BorderRadius::all(Val::Px(6.0)),
             button_normal_background: BackgroundColor(Color::srgb_u8(21, 26, 35)), // #151A23
             button_hovered_background: BackgroundColor(Color::srgb(0.25, 0.25, 0.25)),
@@ -63,7 +63,7 @@ impl Theme {
             text_font_symbols,
             text_color: Color::srgb(0.0, 0.0, 0.0),
             border_rect: UiRect::all(Val::Px(2.0)),
-            border_color: BorderColor(Color::srgb(0.1, 0.1, 0.1)),
+            border_color: Color::srgb(0.1, 0.1, 0.1),
             border_radius: BorderRadius::all(Val::Px(6.0)),
             button_normal_background: BackgroundColor(Color::srgb(1.0, 1.0, 1.0)),
             button_hovered_background: BackgroundColor(Color::srgb(0.75, 0.75, 0.75)),
@@ -120,7 +120,7 @@ fn theme_init_system(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn theme_change_system(
-    mut ev_window_theme_changed: EventReader<WindowThemeChanged>,
+    mut ev_window_theme_changed: MessageReader<WindowThemeChanged>,
     current_theme: Res<Theme>,
     mut commands: Commands,
 ) {

@@ -62,14 +62,14 @@ pub struct PuzzleCellBoardSize {
     pub cols: usize,
 }
 
-#[derive(Event)]
-pub struct PuzzleCellEditEvent {
+#[derive(Message)]
+pub struct PuzzleCellEdited {
     pub entity: Entity,
     pub position: PuzzleCellPosition,
     pub value: Option<u8>,
 }
 
-#[derive(Event, Default)]
+#[derive(Message, Default)]
 pub struct PuzzleCellFocusCleared;
 
 pub fn puzzle_cell_bundle(options: PuzzleCellBundleOptions) -> impl Bundle {
@@ -108,7 +108,7 @@ pub fn puzzle_cell_bundle(options: PuzzleCellBundleOptions) -> impl Bundle {
         PuzzleCell,
         PuzzleCellKind::from(given),
         focus_outline,
-        BorderColor(Color::NONE),
+        BorderColor::DEFAULT,
         cell_node,
         children![(
             PuzzleCellValue,
@@ -158,12 +158,12 @@ fn key_to_cell_edit(key: &Key) -> Option<PuzzleCellEdit> {
 
 pub fn puzzle_cell_input_system(
     mut focused_entity: ResMut<FocusedEntity>,
-    mut keyboard_input_events: EventReader<KeyboardInput>,
+    mut keyboard_input_events: MessageReader<KeyboardInput>,
     cell_query: Query<(Entity, &PuzzleCellPosition, &PuzzleCellKind, &Children)>,
     mut value_query: Query<&mut Text, With<PuzzleCellValue>>,
     board_size: Res<PuzzleCellBoardSize>,
-    mut edit_events: EventWriter<PuzzleCellEditEvent>,
-    mut focus_clear_events: EventWriter<PuzzleCellFocusCleared>,
+    mut edit_events: MessageWriter<PuzzleCellEdited>,
+    mut focus_clear_events: MessageWriter<PuzzleCellFocusCleared>,
 ) {
     let Some(target_entity) = focused_entity.current.or(focused_entity.last) else {
         return;
@@ -247,7 +247,7 @@ pub fn puzzle_cell_input_system(
         match edit {
             PuzzleCellEdit::Set(value) => {
                 text.0 = value.to_string();
-                edit_events.write(PuzzleCellEditEvent {
+                edit_events.write(PuzzleCellEdited {
                     entity: target_entity,
                     position,
                     value: Some(value),
@@ -255,7 +255,7 @@ pub fn puzzle_cell_input_system(
             }
             PuzzleCellEdit::Clear => {
                 text.0.clear();
-                edit_events.write(PuzzleCellEditEvent {
+                edit_events.write(PuzzleCellEdited {
                     entity: target_entity,
                     position,
                     value: None,

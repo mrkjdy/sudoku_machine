@@ -6,7 +6,7 @@ use crate::{
     plugins::{
         common::{
             bundles::puzzle_cell::{
-                puzzle_cell_input_system, PuzzleCell, PuzzleCellBoardSize, PuzzleCellEditEvent,
+                puzzle_cell_input_system, PuzzleCell, PuzzleCellBoardSize, PuzzleCellEdited,
                 PuzzleCellFocusCleared, PuzzleCellKind, PuzzleCellNeighborHighlight,
                 PuzzleCellPosition, PUZZLE_CELL_NEIGHBOR_HIGHLIGHT_COLOR,
             },
@@ -96,8 +96,8 @@ const COPY_ICON: &str = "❐";
 const CHECK_ICON: &str = "✔";
 
 pub fn game_plugin(app: &mut App) {
-    app.add_event::<PuzzleCellEditEvent>()
-        .add_event::<PuzzleCellFocusCleared>()
+    app.add_message::<PuzzleCellEdited>()
+        .add_message::<PuzzleCellFocusCleared>()
         .add_systems(OnEnter(ScreenState::Game), game_setup)
         .add_systems(
             OnExit(ScreenState::Game),
@@ -234,7 +234,7 @@ fn game_setup(
                         TextFont::from_font_size(30.0),
                         ThemedFontWeight::Bold,
                         ThemedTextColor,
-                        TextLayout::new_with_justify(JustifyText::Center),
+                        TextLayout::new_with_justify(Justify::Center),
                     ));
                     info.spawn((
                         SeedButton,
@@ -258,7 +258,7 @@ fn game_setup(
                                 ThemedFontWeight::Regular,
                                 Text::from(puzzle_settings.seed.clone()),
                                 TextFont::from_font_size(20.0),
-                                TextLayout::new_with_justify(JustifyText::Left),
+                                TextLayout::new_with_justify(Justify::Left),
                             ),
                             (
                                 SeedCopyIcon,
@@ -266,7 +266,7 @@ fn game_setup(
                                 ThemedFontWeight::Symbolic,
                                 Text::from(COPY_ICON),
                                 TextFont::from_font_size(22.0),
-                                TextLayout::new_with_justify(JustifyText::Right),
+                                TextLayout::new_with_justify(Justify::Right),
                             )
                         ],
                     ));
@@ -294,7 +294,7 @@ fn game_setup(
                 ThemedFontWeight::Bold,
                 Text::from("0:00"),
                 TextFont::from_font_size(28.0),
-                TextLayout::new_with_justify(JustifyText::Right),
+                TextLayout::new_with_justify(Justify::Right),
             )],
         ));
     });
@@ -463,7 +463,7 @@ fn seed_copy_feedback_system(
     mut query: Query<(Entity, &mut SeedCopyFeedbackTimer, &mut Text), With<SeedCopyIcon>>,
 ) {
     for (entity, mut feedback_timer, mut text) in &mut query {
-        if feedback_timer.0.tick(time.delta()).finished() {
+        if feedback_timer.0.tick(time.delta()).is_finished() {
             text.0 = COPY_ICON.to_string();
             commands.entity(entity).remove::<SeedCopyFeedbackTimer>();
         }
@@ -471,7 +471,7 @@ fn seed_copy_feedback_system(
 }
 
 fn classic_puzzle_cell_apply_edit_system(
-    mut events: EventReader<PuzzleCellEditEvent>,
+    mut events: MessageReader<PuzzleCellEdited>,
     mut grid_state: ResMut<ClassicGridState>,
 ) {
     for event in events.read() {
@@ -480,7 +480,7 @@ fn classic_puzzle_cell_apply_edit_system(
 }
 
 fn classic_puzzle_focus_clear_system(
-    mut events: EventReader<PuzzleCellFocusCleared>,
+    mut events: MessageReader<PuzzleCellFocusCleared>,
     mut escape_nav_state: ResMut<EscapeNavState>,
 ) {
     if events.is_empty() {

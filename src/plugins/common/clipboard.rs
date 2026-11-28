@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 #[cfg(target_family = "wasm")]
-use bevy_defer::{AsyncAccess, AsyncCommandsExtension};
+use bevy_defer::AsyncCommandsExtension;
 #[cfg(target_family = "wasm")]
 use std::cell::{Cell, RefCell};
 #[cfg(target_family = "wasm")]

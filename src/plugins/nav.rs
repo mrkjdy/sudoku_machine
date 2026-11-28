@@ -70,7 +70,7 @@ fn nav_setup(mut commands: Commands) {
         TextFont::from_font_size(50.0),
         ThemedFontWeight::Symbolic,
         ThemedTextColor,
-        TextLayout::new_with_justify(JustifyText::Center),
+        TextLayout::new_with_justify(Justify::Center),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
@@ -136,7 +136,7 @@ fn nav_visibility_system(
 }
 
 fn nav_escape_system(
-    mut keyboard_input_events: EventReader<KeyboardInput>,
+    mut keyboard_input_events: MessageReader<KeyboardInput>,
     focused: Option<Res<FocusedEntity>>,
     escape_state: Res<EscapeNavState>,
     current_screen: Option<Res<State<ScreenState>>>,
@@ -158,9 +158,7 @@ fn nav_escape_system(
     if let Some(screen_state) = current_screen.as_ref() {
         match screen_state.get() {
             ScreenState::Home => {
-                commands.queue(|world: &mut World| {
-                    world.send_event(AppExit::Success);
-                });
+                commands.write_message(AppExit::Success);
             }
             _ => {
                 if let Some(ref mut next) = next_screen {
